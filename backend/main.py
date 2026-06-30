@@ -16,9 +16,20 @@ app.add_middleware(
 )
 
 ALLOWED_TICKERS = {"META", "AAPL", "MSFT", "AMZN", "GOOGL", "NVDA", "TSLA"}
-CACHE_TTL = 300  # 5 minutes
+CACHE_TTL = 300        # 5 minutes for quote data
+HISTORY_TTL = 600      # 10 minutes for historical data
 
 _cache: Dict[str, Dict] = {}
+_history_cache: Dict[str, Dict] = {}
+
+PERIOD_MAP = {
+    "1M":  ("1mo",  "1d"),
+    "3M":  ("3mo",  "1d"),
+    "6M":  ("6mo",  "1d"),
+    "YTD": ("ytd",  "1d"),
+    "1Y":  ("1y",   "1d"),
+    "ALL": ("max",  "1wk"),
+}
 
 
 def safe(val: Any) -> Optional[float]:
@@ -193,6 +204,42 @@ async def get_stock(ticker: str):
         return {**entry["data"], "stale": True}
 
     raise HTTPException(500, f"Failed to fetch {ticker}: {last_err}")
+
+
+@app.get("/api/stock/{ticker}/history")
+async def get_history(ticker: str, period: str = "1Y"):
+    ticker = ticker.upper()
+    period = period.upper()
+    if ticker not in ALLOWED_TICKERS:
+        raise HTTPException(400, f"Ticker not supported: {ticker}")
+    if period not in PERIOD_MAP:
+        period = "1Y"
+
+    cache_key = f"{ticker}:{period}"
+    entry = _history_cache.get(cache_key)
+    if entry and time.time() - entry["ts"] < HISTORY_TTL:
+        return entry["data"]
+
+    yf_period, yf_interval = PERIOD_MAP[period]
+    try:
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period=yf_period, interval=yf_interval)
+        eps = safe(stock.info.get("trailingEps"))
+
+        points = []
+        for date, row in hist.iterrows():
+            close = safe(row.get("Close"))
+            if close is None:
+                continue
+            pe = round(close / eps, 2) if (eps and eps > 0) else None
+            date_str = date.strftime("%Y-%m-%d") if hasattr(date, "strftime") else str(date)[:10]
+            points.append({"date": date_str, "price": round(close, 2), "pe": pe})
+
+        result = {"ticker": ticker, "period": period, "data": points}
+        _history_cache[cache_key] = {"data": result, "ts": time.time()}
+        return result
+    except Exception as e:
+        raise HTTPException(500, f"History fetch failed for {ticker}: {str(e)}")
 
 
 @app.get("/health")

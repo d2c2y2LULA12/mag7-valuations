@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import TradingCard, { CARD_W, CARD_H } from '@/components/TradingCard';
+import TradingCard, { CARD_W, CARD_H, CardFront, HoloCardWrapper } from '@/components/TradingCard';
 import StockDetail from '@/components/StockDetail';
 import Sidebar, { HamburgerButton } from '@/components/Sidebar';
 import { COMPANIES } from '@/lib/constants';
@@ -10,6 +10,7 @@ import { Company } from '@/lib/types';
 
 type Phase = 'grid' | 'flipping' | 'detail';
 
+// Standalone flip animation — shown full-screen during card→detail transition
 function FlipCard({ company, onDone }: { company: Company; onDone: () => void }) {
   const [flipped, setFlipped] = useState(false);
   const called = useRef(false);
@@ -25,28 +26,14 @@ function FlipCard({ company, onDone }: { company: Company; onDone: () => void })
   return (
     <div className="card-flip-container" style={{ width: CARD_W, height: CARD_H }}>
       <div className={`card-flip-inner w-full h-full ${flipped ? 'flipped' : ''}`}>
-        <div
-          className="card-face card-navy-base flex items-center justify-center flex-col"
-          style={{ borderRadius: 12 }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`https://cdn.simpleicons.org/${company.iconSlug}/${company.brandColor.replace('#', '')}`}
-            alt={company.shortName}
-            width={80}
-            height={80}
-            style={{ objectFit: 'contain', position: 'relative', zIndex: 1 }}
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-          />
-          <p style={{ position: 'relative', zIndex: 1, marginTop: 10, fontSize: 10, letterSpacing: '0.2em', opacity: 0.2, textTransform: 'uppercase', color: 'white' }}>
-            {company.ticker}
-          </p>
+        {/* Front */}
+        <div className="card-face card-navy-base rounded-xl flex items-center justify-center flex-col overflow-hidden">
+          <HoloCardWrapper width={CARD_W} height={CARD_H}>
+            <CardFront company={company} cardW={CARD_W} />
+          </HoloCardWrapper>
         </div>
-
-        <div
-          className="card-face card-face-back card-navy-base flex items-center justify-center"
-          style={{ borderRadius: 12 }}
-        >
+        {/* Back (loading state) */}
+        <div className="card-face card-face-back card-navy-base rounded-xl flex items-center justify-center overflow-hidden">
           <div
             className="rounded-full border-2 animate-spin"
             style={{ width: 28, height: 28, borderColor: `${company.brandColor} transparent transparent transparent` }}
@@ -57,30 +44,49 @@ function FlipCard({ company, onDone }: { company: Company; onDone: () => void })
   );
 }
 
-// Renders cards for one row, shared props handled by parent
-function CardRow({
+// Grid of cards rendered on the homepage — split into rows for mobile
+function CardGrid({
   companies,
   selectedTicker,
   flipping,
-  onClick,
+  onCardClick,
 }: {
   companies: Company[];
   selectedTicker: string | null;
   flipping: boolean;
-  onClick: (c: Company) => void;
+  onCardClick: (c: Company) => void;
 }) {
+  const cardProps = (company: Company) => ({
+    company,
+    onClick: () => onCardClick(company),
+    isSelected: selectedTicker === company.ticker,
+    isOtherSelected: flipping && selectedTicker !== company.ticker,
+  });
+
   return (
-    <div className="flex gap-5 justify-center">
-      {companies.map((company) => (
-        <TradingCard
-          key={company.ticker}
-          company={company}
-          onClick={() => onClick(company)}
-          isSelected={selectedTicker === company.ticker}
-          isOtherSelected={flipping && selectedTicker !== company.ticker}
-        />
-      ))}
-    </div>
+    <>
+      {/* Desktop: single row, horizontally scrollable if needed */}
+      <div className="hidden md:flex gap-5 justify-center overflow-x-auto pb-2"
+        style={{ minWidth: 0 }}>
+        <div className="flex gap-5" style={{ minWidth: COMPANIES.length * (CARD_W + 20) }}>
+          {companies.map((c) => <TradingCard key={c.ticker} {...cardProps(c)} />)}
+        </div>
+      </div>
+
+      {/* Mobile: 4 top + 3 bottom, each row horizontally scrollable */}
+      <div className="md:hidden flex flex-col gap-4 w-full">
+        <div className="overflow-x-auto pb-1">
+          <div className="flex gap-4 justify-center" style={{ minWidth: 4 * (CARD_W + 16) }}>
+            {companies.slice(0, 4).map((c) => <TradingCard key={c.ticker} {...cardProps(c)} />)}
+          </div>
+        </div>
+        <div className="overflow-x-auto pb-1">
+          <div className="flex gap-4 justify-center" style={{ minWidth: 3 * (CARD_W + 16) }}>
+            {companies.slice(4).map((c) => <TradingCard key={c.ticker} {...cardProps(c)} />)}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -99,25 +105,28 @@ export default function Home() {
     setPhase('detail');
   }, []);
 
+  // Back to homepage — clear selection smoothly
   const handleBack = useCallback(() => {
     setPhase('grid');
     setSelectedCompany(null);
   }, []);
 
+  // Sidebar company link → go directly to detail view
   const handleNavigateToCompany = useCallback((company: Company) => {
     setSelectedCompany(company);
     setPhase('detail');
+    setSidebarOpen(false);
   }, []);
 
+  // Sidebar home link
   const handleNavigateHome = useCallback(() => {
     setPhase('grid');
     setSelectedCompany(null);
+    setSidebarOpen(false);
   }, []);
 
   const formattedTime = lastUpdated.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
+    hour: 'numeric', minute: '2-digit', hour12: true,
   });
 
   const flipping = phase === 'flipping';
@@ -132,44 +141,47 @@ export default function Home() {
         onNavigateToCompany={handleNavigateToCompany}
       />
 
-      <div className="min-h-screen" style={{ background: '#0a0a0a' }}>
-        <AnimatePresence mode="wait">
-          {/* ── GRID VIEW ───────────────────────────────────────────── */}
+      {/*
+        Outer container is `relative` so absolute children can overlay each other during
+        crossfade transitions. This prevents the black-screen flash that `mode="wait"` causes.
+        Each view fills the viewport via `position: absolute; inset: 0`.
+      */}
+      <div className="relative" style={{ minHeight: '100vh', background: '#0a0a0a' }}>
+        <AnimatePresence>
+
+          {/* ── GRID VIEW ────────────────────────────────────────── */}
           {(phase === 'grid' || phase === 'flipping') && (
             <motion.div
               key="grid-view"
+              className="absolute inset-0 flex flex-col"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0, transition: { duration: 0.2 } }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              style={{ minHeight: '100vh' }}
             >
-              {/* Dark overlay + flip card during transition */}
+              {/* Flip overlay — shown over the grid during card→detail transition */}
               <AnimatePresence>
-                {phase === 'flipping' && (
+                {phase === 'flipping' && selectedCompany && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className="fixed inset-0 z-40 flex items-center justify-center"
                     style={{ background: 'rgba(0,0,0,0.88)' }}
                   >
-                    {selectedCompany && (
-                      <FlipCard company={selectedCompany} onDone={handleFlipDone} />
-                    )}
+                    <FlipCard company={selectedCompany} onDone={handleFlipDone} />
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              <div className="min-h-screen flex flex-col px-4 pt-4 pb-8">
-                {/* Hamburger */}
-                <div className="self-start">
-                  <HamburgerButton onClick={() => setSidebarOpen(true)} />
-                </div>
-
-                {/* Title — minimal top padding */}
+              {/* ── TOP ZONE: hamburger + title ────────────────────── */}
+              <div className="flex-shrink-0 pt-6 px-6">
+                <HamburgerButton onClick={() => setSidebarOpen(true)} />
                 <motion.div
-                  initial={{ opacity: 0, y: -16 }}
+                  initial={{ opacity: 0, y: -14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.45 }}
-                  className="text-center mt-3 mb-8"
+                  className="text-center mt-4"
                 >
                   <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2 text-white">
                     Mag 7 <span style={{ color: '#4FD1E8' }}>Valuations</span>
@@ -178,80 +190,32 @@ export default function Home() {
                     Live financials for the Magnificent Seven. Click a card to dive in.
                   </p>
                 </motion.div>
+              </div>
 
-                {/* ── Desktop: single row ────────────────────────────── */}
+              {/* ── MIDDLE ZONE: cards centered in remaining space ─── */}
+              <div className="flex-1 flex items-center justify-center px-4 py-6">
                 <motion.div
-                  className="hidden md:block w-full overflow-x-auto pb-4"
-                  initial={{ opacity: 0, y: 24 }}
+                  className="w-full"
+                  initial={{ opacity: 0, y: 22 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.12 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
                 >
-                  <div
-                    className="flex gap-5 justify-center mx-auto"
-                    style={{ minWidth: COMPANIES.length * (CARD_W + 20) }}
-                  >
-                    {COMPANIES.map((company) => (
-                      <TradingCard
-                        key={company.ticker}
-                        company={company}
-                        onClick={() => handleCardClick(company)}
-                        isSelected={selectedTicker === company.ticker}
-                        isOtherSelected={flipping && selectedTicker !== company.ticker}
-                      />
-                    ))}
-                  </div>
+                  <CardGrid
+                    companies={COMPANIES}
+                    selectedTicker={selectedTicker}
+                    flipping={flipping}
+                    onCardClick={handleCardClick}
+                  />
                 </motion.div>
+              </div>
 
-                {/* ── Mobile: 4 top + 3 bottom ──────────────────────── */}
-                <motion.div
-                  className="md:hidden flex flex-col gap-4 items-center w-full"
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.12 }}
-                >
-                  {/* Row 1: first 4 */}
-                  <div className="w-full overflow-x-auto pb-2">
-                    <div
-                      className="flex gap-4 justify-center"
-                      style={{ minWidth: 4 * (CARD_W + 16) }}
-                    >
-                      {COMPANIES.slice(0, 4).map((company) => (
-                        <TradingCard
-                          key={company.ticker}
-                          company={company}
-                          onClick={() => handleCardClick(company)}
-                          isSelected={selectedTicker === company.ticker}
-                          isOtherSelected={flipping && selectedTicker !== company.ticker}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Row 2: last 3, centered */}
-                  <div className="w-full overflow-x-auto pb-2">
-                    <div
-                      className="flex gap-4 justify-center"
-                      style={{ minWidth: 3 * (CARD_W + 16) }}
-                    >
-                      {COMPANIES.slice(4).map((company) => (
-                        <TradingCard
-                          key={company.ticker}
-                          company={company}
-                          onClick={() => handleCardClick(company)}
-                          isSelected={selectedTicker === company.ticker}
-                          isOtherSelected={flipping && selectedTicker !== company.ticker}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Footer */}
+              {/* ── BOTTOM ZONE: footer anchored to bottom ───────────── */}
+              <div className="flex-shrink-0 pb-6 px-6">
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="mt-8 flex items-center justify-center gap-4 text-xs text-gray-600"
+                  transition={{ delay: 0.35 }}
+                  className="flex items-center justify-center gap-4 text-xs text-gray-600"
                 >
                   <span>Updated {formattedTime}</span>
                   <span>&middot;</span>
@@ -272,14 +236,16 @@ export default function Home() {
             </motion.div>
           )}
 
-          {/* ── DETAIL VIEW ─────────────────────────────────────────── */}
+          {/* ── DETAIL VIEW ──────────────────────────────────────── */}
           {phase === 'detail' && selectedCompany && (
             <motion.div
               key={`detail-${selectedCompany.ticker}`}
+              className="absolute top-0 left-0 right-0"
+              style={{ minHeight: '100vh', overflowY: 'auto' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.25 }}
             >
               <StockDetail
                 company={selectedCompany}
@@ -288,6 +254,7 @@ export default function Home() {
               />
             </motion.div>
           )}
+
         </AnimatePresence>
       </div>
     </>

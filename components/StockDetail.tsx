@@ -3,40 +3,25 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Company, StockData } from '@/lib/types';
-import { MiniCard } from './TradingCard';
+import { MiniCard, CARD_W } from './TradingCard';
 import { HamburgerButton } from './Sidebar';
 import FinancialTables from './FinancialTables';
-import { formatBig, formatPercent, formatRatio, formatPrice, getValuationSignal } from '@/lib/constants';
+import StockCharts from './StockChart';
+import { formatBig, formatRatio, formatPrice, getValuationSignal } from '@/lib/constants';
 
 type Tab = 'overview' | 'financials' | 'valuation';
 
 // ── Skeleton loaders ──────────────────────────────────────────────────────────
 
-function FieldSkeleton({ width = '60%', height = 20 }: { width?: string | number; height?: number }) {
-  return (
-    <div
-      className="skeleton rounded"
-      style={{ width, height, display: 'inline-block' }}
-    />
-  );
+function FieldSkeleton({ width = '60%', height = 14 }: { width?: string | number; height?: number }) {
+  return <div className="skeleton rounded inline-block" style={{ width, height }} />;
 }
 
 function MetricSkeleton() {
   return (
     <div className="flex flex-col gap-2 p-4 rounded-xl border border-[#1a1a2e]" style={{ background: 'rgba(13,13,26,0.7)' }}>
-      <FieldSkeleton width="55%" height={10} />
-      <FieldSkeleton width="70%" height={22} />
-    </div>
-  );
-}
-
-function StatBarSkeleton() {
-  return (
-    <div className="flex items-center gap-4 py-2.5 border-b border-[#1a1a2e] last:border-0">
-      <div className="skeleton rounded w-36 h-4 flex-shrink-0" />
-      <div className="skeleton rounded w-20 h-4 flex-shrink-0" />
-      <div className="flex-1 skeleton rounded-full h-2.5" />
-      <div className="skeleton rounded w-8 h-4 flex-shrink-0" />
+      <FieldSkeleton width="50%" height={10} />
+      <FieldSkeleton width="65%" height={22} />
     </div>
   );
 }
@@ -45,11 +30,9 @@ function StatBarSkeleton() {
 
 interface StatBarConfig {
   label: string;
-  value: number | null;
   display: string;
   percent: number;
   isGood: boolean;
-  lowerIsBetter?: boolean;
 }
 
 function clamp(v: number, lo: number, hi: number) {
@@ -57,49 +40,42 @@ function clamp(v: number, lo: number, hi: number) {
 }
 
 function buildStats(data: StockData): StatBarConfig[] {
-  const pct = (v: number | null, scale: number): number =>
+  const pct = (v: number | null, scale: number) =>
     v === null ? 0 : clamp((v / scale) * 100, 0, 100);
 
   return [
     {
       label: 'Revenue Growth',
-      value: data.revenueGrowth,
       display: data.revenueGrowth !== null ? `${(data.revenueGrowth * 100).toFixed(1)}%` : 'N/A',
       percent: pct(data.revenueGrowth, 0.5),
       isGood: (data.revenueGrowth ?? 0) >= 0.12,
     },
     {
       label: 'Profit Margin',
-      value: data.profitMargin,
       display: data.profitMargin !== null ? `${(data.profitMargin * 100).toFixed(1)}%` : 'N/A',
       percent: pct(data.profitMargin, 0.5),
       isGood: (data.profitMargin ?? 0) >= 0.18,
     },
     {
       label: 'Return on Equity',
-      value: data.returnOnEquity,
       display: data.returnOnEquity !== null ? `${(data.returnOnEquity * 100).toFixed(1)}%` : 'N/A',
       percent: clamp(((data.returnOnEquity ?? 0) / 2.5) * 100, 0, 100),
       isGood: (data.returnOnEquity ?? 0) >= 0.5,
     },
     {
       label: 'EPS (TTM)',
-      value: data.eps,
       display: data.eps !== null ? `$${data.eps.toFixed(2)}` : 'N/A',
       percent: pct(data.eps, 30),
       isGood: (data.eps ?? 0) >= 8,
     },
     {
       label: 'Debt / Equity',
-      value: data.debtToEquity,
       display: data.debtToEquity !== null ? `${data.debtToEquity.toFixed(1)}` : 'N/A',
       percent: data.debtToEquity === null ? 0 : clamp(100 - (data.debtToEquity / 300) * 100, 0, 100),
       isGood: (data.debtToEquity ?? 999) < 100,
-      lowerIsBetter: true,
     },
     {
       label: 'Free Cash Flow',
-      value: data.freeCashFlow,
       display: formatBig(data.freeCashFlow),
       percent: pct(data.freeCashFlow, 120e9),
       isGood: (data.freeCashFlow ?? 0) >= 20e9,
@@ -123,7 +99,8 @@ function FIFAStatBar({ stat }: { stat: StatBarConfig }) {
           transition={{ duration: 0.8, ease: 'easeOut', delay: 0.1 }}
         />
       </div>
-      <span className="text-xs w-8 text-right flex-shrink-0" style={{ color: stat.isGood ? '#10B981' : '#EF4444' }}>
+      <span className="text-xs w-8 text-right flex-shrink-0"
+        style={{ color: stat.isGood ? '#10B981' : '#EF4444' }}>
         {Math.round(stat.percent)}
       </span>
     </div>
@@ -133,16 +110,21 @@ function FIFAStatBar({ stat }: { stat: StatBarConfig }) {
 function OverviewTab({ data, loading }: { data: StockData | null; loading: boolean }) {
   if (loading || !data) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <div className="rounded-xl border border-[#1e1e3a] px-5 py-1" style={{ background: 'rgba(13,13,26,0.7)' }}>
-          {Array.from({ length: 6 }).map((_, i) => <StatBarSkeleton key={i} />)}
-        </div>
-      </motion.div>
+      <div className="rounded-xl border border-[#1e1e3a] px-5 py-1" style={{ background: 'rgba(13,13,26,0.7)' }}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 py-2.5 border-b border-[#1a1a2e] last:border-0">
+            <div className="skeleton rounded w-36 h-4 flex-shrink-0" />
+            <div className="skeleton rounded w-20 h-4 flex-shrink-0 ml-auto" />
+            <div className="flex-1 skeleton rounded-full h-2.5" />
+            <div className="skeleton rounded w-8 h-4 flex-shrink-0" />
+          </div>
+        ))}
+      </div>
     );
   }
   const stats = buildStats(data);
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <p className="text-xs text-gray-600 mb-4">
         Bar represents strength vs. Mag 7 peers. Green = above benchmark, red = below.
       </p>
@@ -158,25 +140,25 @@ function OverviewTab({ data, loading }: { data: StockData | null; loading: boole
 function FinancialsTab({ data, loading }: { data: StockData | null; loading: boolean }) {
   if (loading || !data) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+      <div className="space-y-6">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="rounded-xl border border-[#1e1e3a] p-5" style={{ background: 'rgba(13,13,26,0.7)' }}>
             <div className="skeleton rounded w-40 h-5 mb-4" />
             {Array.from({ length: 5 }).map((_, j) => (
               <div key={j} className="flex justify-between py-2 border-b border-[#1a1a2e] last:border-0">
-                <FieldSkeleton width="35%" height={14} />
+                <FieldSkeleton width="35%" />
                 <div className="flex gap-8">
-                  {Array.from({ length: 4 }).map((_, k) => <FieldSkeleton key={k} width={50} height={14} />)}
+                  {Array.from({ length: 4 }).map((_, k) => <FieldSkeleton key={k} width={50} />)}
                 </div>
               </div>
             ))}
           </div>
         ))}
-      </motion.div>
+      </div>
     );
   }
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <FinancialTables data={data} />
     </motion.div>
   );
@@ -186,23 +168,19 @@ function FinancialsTab({ data, loading }: { data: StockData | null; loading: boo
 
 const MAG7_AVG = { pe: 35, forwardPe: 27, ps: 11, evEbitda: 28 };
 
-interface ValMetric {
-  label: string;
-  value: number | null;
-  avg: number;
-  suffix?: string;
-}
+interface ValMetric { label: string; value: number | null; avg: number; suffix?: string; }
 
 function ValBar({ m }: { m: ValMetric }) {
-  if (m.value === null) return (
-    <div className="mb-6">
-      <div className="flex justify-between mb-1">
-        <span className="text-sm text-gray-400">{m.label}</span>
-        <span className="text-sm text-gray-600">N/A</span>
+  if (m.value === null) {
+    return (
+      <div className="mb-6">
+        <div className="flex justify-between mb-1">
+          <span className="text-sm text-gray-400">{m.label}</span>
+          <span className="text-sm text-gray-600">N/A</span>
+        </div>
       </div>
-    </div>
-  );
-
+    );
+  }
   const scale = m.avg * 2;
   const fillPct = clamp((m.value / scale) * 100, 0, 100);
   const isCheap = m.value < m.avg;
@@ -245,12 +223,12 @@ function ValBar({ m }: { m: ValMetric }) {
 function ValuationTab({ data, loading }: { data: StockData | null; loading: boolean }) {
   if (loading || !data) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+      <div className="space-y-6">
         <div className="rounded-xl border border-[#1e1e3a] p-5" style={{ background: 'rgba(13,13,26,0.7)' }}>
           <div className="flex justify-between items-center">
             <div className="space-y-2">
-              <FieldSkeleton width={120} height={10} />
-              <FieldSkeleton width={180} height={10} />
+              <FieldSkeleton width={110} height={10} />
+              <FieldSkeleton width={170} height={10} />
             </div>
             <FieldSkeleton width={80} height={36} />
           </div>
@@ -266,14 +244,13 @@ function ValuationTab({ data, loading }: { data: StockData | null; loading: bool
             </div>
           ))}
         </div>
-      </motion.div>
+      </div>
     );
   }
 
   const signal = getValuationSignal(data.forwardPE);
   const signalClass =
     signal === 'CHEAP' ? 'badge-cheap' : signal === 'FAIR' ? 'badge-fair' : signal === 'RICH' ? 'badge-rich' : 'badge-na';
-
   const metrics: ValMetric[] = [
     { label: 'P/E Ratio (Trailing)', value: data.peRatio,      avg: MAG7_AVG.pe },
     { label: 'Forward P/E',          value: data.forwardPE,    avg: MAG7_AVG.forwardPe },
@@ -282,7 +259,7 @@ function ValuationTab({ data, loading }: { data: StockData | null; loading: bool
   ];
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <div className="rounded-xl border border-[#1e1e3a] p-5 mb-6 flex items-center justify-between" style={{ background: 'rgba(13,13,26,0.7)' }}>
         <div>
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Valuation Signal</p>
@@ -353,23 +330,15 @@ export default function StockDetail({
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.35 }}
+    <div
       className="min-h-screen"
       style={{ background: 'linear-gradient(180deg, #000000 0%, #0a0a0a 100%)' }}
     >
-      {/* ── Sticky header ──────────────────────────────────────────── */}
-      <div className="sticky top-0 z-50 border-b border-[#1a1a2e] backdrop-blur-sm" style={{ background: 'rgba(0,0,0,0.9)' }}>
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
-          {/* Hamburger */}
-          {onOpenSidebar && (
-            <HamburgerButton onClick={onOpenSidebar} className="flex-shrink-0" />
-          )}
-
-          {/* Back */}
+      {/* ── Sticky header ──────────────────────────────────────── */}
+      <div className="sticky top-0 z-50 border-b border-[#1a1a2e] backdrop-blur-sm"
+        style={{ background: 'rgba(0,0,0,0.9)' }}>
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+          {onOpenSidebar && <HamburgerButton onClick={onOpenSidebar} className="flex-shrink-0" />}
           <button
             onClick={onBack}
             className="flex items-center gap-2 text-sm text-gray-400 hover:text-[#4FD1E8] transition-colors flex-shrink-0"
@@ -379,7 +348,6 @@ export default function StockDetail({
             </svg>
             Back
           </button>
-
           <div className="flex-1 flex items-center justify-center gap-2">
             <span className="font-bold text-sm" style={{ color: company.brandColor }}>{company.ticker}</span>
             <span className="text-gray-500 text-sm hidden sm:inline">{company.name}</span>
@@ -390,31 +358,31 @@ export default function StockDetail({
               </span>
             )}
           </div>
-
-          {loading ? (
-            <div className="skeleton rounded w-20 h-6 flex-shrink-0" />
-          ) : data ? (
-            <p className="text-lg font-semibold text-gray-100 tabular-nums flex-shrink-0">{formatPrice(data.price)}</p>
-          ) : null}
+          {loading
+            ? <div className="skeleton rounded w-20 h-6 flex-shrink-0" />
+            : data
+            ? <p className="text-lg font-semibold text-gray-100 tabular-nums flex-shrink-0">{formatPrice(data.price)}</p>
+            : null}
         </div>
       </div>
 
-      {/* ── Body ────────────────────────────────────────────────────── */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      {/* ── Body ──────────────────────────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex gap-8">
 
-          {/* ── Pinned holographic mini cards (desktop) ──────────── */}
-          <div className="flex-shrink-0 hidden md:block" style={{ width: 140 }}>
-            <div className="sticky top-20 flex flex-col gap-3 items-center">
+          {/* ── Pinned left column: two full-size holographic cards ─ */}
+          <div className="flex-shrink-0 hidden lg:block" style={{ width: CARD_W }}>
+            <div className="sticky top-20 flex flex-col gap-4 items-center">
               <MiniCard company={company} data={data} loading={loading} face="front" />
               <MiniCard company={company} data={data} loading={loading} face="back" />
-              <p className="text-xs text-gray-600 text-center">{company.shortName}</p>
+              <p className="text-xs text-gray-600 text-center mt-1">{company.shortName}</p>
             </div>
           </div>
 
           {/* ── Main content ────────────────────────────────────── */}
           <div className="flex-1 min-w-0">
-            <div className="mb-8">
+            {/* Company name + key metric chips */}
+            <div className="mb-6">
               <h2 className="text-2xl font-bold text-white mb-1">{company.name}</h2>
               <p className="text-sm text-gray-500 mb-5">{company.ticker} &middot; NASDAQ</p>
 
@@ -439,7 +407,10 @@ export default function StockDetail({
               ) : null}
             </div>
 
-            {/* Tab bar */}
+            {/* ── Charts ─────────────────────────────────────────── */}
+            <StockCharts ticker={company.ticker} />
+
+            {/* ── Tab bar ─────────────────────────────────────────── */}
             <div className="flex gap-1 mb-6 border-b border-[#1e1e3a]">
               {tabs.map((t) => (
                 <button
@@ -460,21 +431,21 @@ export default function StockDetail({
               ))}
             </div>
 
-            {/* Tab content — always renders (skeleton inside each tab) */}
+            {/* Tab content — skeletons always show while loading */}
             {!error && (
               <AnimatePresence mode="wait">
                 {activeTab === 'overview' && (
-                  <motion.div key="overview">
+                  <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
                     <OverviewTab data={data} loading={loading} />
                   </motion.div>
                 )}
                 {activeTab === 'financials' && (
-                  <motion.div key="financials">
+                  <motion.div key="financials" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
                     <FinancialsTab data={data} loading={loading} />
                   </motion.div>
                 )}
                 {activeTab === 'valuation' && (
-                  <motion.div key="valuation">
+                  <motion.div key="valuation" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
                     <ValuationTab data={data} loading={loading} />
                   </motion.div>
                 )}
@@ -483,6 +454,6 @@ export default function StockDetail({
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

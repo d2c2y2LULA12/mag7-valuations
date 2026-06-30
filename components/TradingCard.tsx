@@ -5,6 +5,9 @@ import { motion } from 'framer-motion';
 import { Company, StockData, ValuationSignal } from '@/lib/types';
 import { getValuationSignal, formatBig, formatPercent, formatPrice } from '@/lib/constants';
 
+export const CARD_W = 220;
+export const CARD_H = 300;
+
 // ── Inline SVG logos ──────────────────────────────────────────────────────────
 
 function MsftLogo({ size }: { size: number }) {
@@ -30,24 +33,20 @@ function GooglLogo({ size }: { size: number }) {
 }
 
 function AmznLogo({ size }: { size: number }) {
-  // Black 'a' with orange smile — uses near-black stroke for brand correctness
   return (
     <svg width={size} height={size} viewBox="0 0 100 110" fill="none">
-      {/* lowercase 'a' — dark, blends with navy card */}
       <circle cx="46" cy="44" r="26" stroke="#0d1120" strokeWidth="11" fill="none"/>
       <line x1="72" y1="19" x2="72" y2="68" stroke="#0d1120" strokeWidth="11" strokeLinecap="round"/>
-      {/* orange smile arrow */}
       <path d="M10 86 Q50 106 88 86" stroke="#FF9900" strokeWidth="7" strokeLinecap="round" fill="none"/>
       <path d="M80 80 L88 86 L80 92" stroke="#FF9900" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
     </svg>
   );
 }
 
-function CompanyLogo({ company, size }: { company: Company; size: number }) {
+export function CompanyLogo({ company, size }: { company: Company; size: number }) {
   if (company.ticker === 'MSFT') return <MsftLogo size={size} />;
   if (company.ticker === 'GOOGL') return <GooglLogo size={size} />;
   if (company.ticker === 'AMZN') return <AmznLogo size={size} />;
-
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -61,31 +60,25 @@ function CompanyLogo({ company, size }: { company: Company; size: number }) {
   );
 }
 
-// ── Card front ────────────────────────────────────────────────────────────────
+// ── Card faces ────────────────────────────────────────────────────────────────
 
-function CardFront({ company, cardW }: { company: Company; cardW: number }) {
+export function CardFront({ company, cardW }: { company: Company; cardW: number }) {
   const logoSize = Math.round(cardW * 0.5);
   return (
-    <div
-      className="card-navy-base relative w-full h-full rounded-xl overflow-hidden flex flex-col items-center justify-center"
-    >
+    <div className="card-navy-base relative w-full h-full rounded-xl overflow-hidden flex flex-col items-center justify-center">
       <div className="card-glass-sheen" />
       <div className="card-shimmer" />
       <div className="relative z-10 flex items-center justify-center">
         <CompanyLogo company={company} size={logoSize} />
       </div>
-      <p
-        className="relative z-10 mt-4 text-sm font-black tracking-widest uppercase"
-        style={{ color: 'rgba(255, 255, 255, 0.12)' }}
-      >
+      <p className="relative z-10 mt-4 text-sm font-black tracking-widest uppercase"
+        style={{ color: 'rgba(255, 255, 255, 0.12)' }}>
         {company.ticker}
       </p>
       <div className="card-emboss" />
     </div>
   );
 }
-
-// ── Card back ─────────────────────────────────────────────────────────────────
 
 function StatRow({ label, value, badge }: { label: string; value: string; badge?: React.ReactNode }) {
   return (
@@ -99,14 +92,14 @@ function StatRow({ label, value, badge }: { label: string; value: string; badge?
   );
 }
 
-function CardBack({ company, data, loading }: { company: Company; data: StockData | null; loading: boolean }) {
+export function CardBack({ company, data, loading }: { company: Company; data: StockData | null; loading: boolean }) {
   const signal: ValuationSignal = data ? getValuationSignal(data.forwardPE) : 'N/A';
   const signalClass =
     signal === 'CHEAP' ? 'badge-cheap' : signal === 'FAIR' ? 'badge-fair' : signal === 'RICH' ? 'badge-rich' : 'badge-na';
 
-  const fwdPE = data?.forwardPE != null ? `${data.forwardPE.toFixed(1)}x` : 'N/A';
+  const fwdPE     = data?.forwardPE    != null ? `${data.forwardPE.toFixed(1)}x`              : 'N/A';
   const revGrowth = data?.revenueGrowth != null ? `${(data.revenueGrowth * 100).toFixed(1)}%` : 'N/A';
-  const profitMgn = data?.profitMargin != null ? `${(data.profitMargin * 100).toFixed(1)}%` : 'N/A';
+  const profitMgn = data?.profitMargin  != null ? `${(data.profitMargin * 100).toFixed(1)}%`  : 'N/A';
 
   return (
     <div className="card-navy-base relative w-full h-full rounded-xl overflow-hidden flex flex-col p-4">
@@ -129,7 +122,7 @@ function CardBack({ company, data, loading }: { company: Company; data: StockDat
         ) : data ? (
           <div className="flex-1 flex flex-col justify-between">
             <div>
-              <StatRow label="Price" value={formatPrice(data.price)} />
+              <StatRow label="Price"      value={formatPrice(data.price)} />
               <StatRow
                 label="Fwd P/E"
                 value={fwdPE}
@@ -154,101 +147,18 @@ function CardBack({ company, data, loading }: { company: Company; data: StockDat
   );
 }
 
-// ── Mini card (detail view) — includes static holographic effects ─────────────
+// ── Shared holographic wrapper — used by both homepage cards and pinned detail cards ──
 
-export function MiniCard({
-  company,
-  data,
-  loading,
-  face,
-}: {
-  company: Company;
-  data: StockData | null;
-  loading: boolean;
-  face: 'front' | 'back';
-}) {
-  const w = 130;
-  const h = 182;
-
-  return (
-    <div
-      style={{
-        width: w,
-        height: h,
-        borderRadius: 10,
-        overflow: 'hidden',
-        flexShrink: 0,
-        border: '1px solid rgba(79, 209, 232, 0.4)',
-        boxShadow: 'inset 0 0 20px rgba(79, 209, 232, 0.06), 0 0 20px rgba(79, 209, 232, 0.08)',
-        position: 'relative',
-      }}
-    >
-      {face === 'front' ? (
-        <div
-          className="w-full h-full flex flex-col items-center justify-center relative"
-          style={{ background: 'linear-gradient(to bottom, #1a1f35 0%, #0a0a14 100%)' }}
-        >
-          {/* Glass sheen */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 30%, transparent 55%)',
-              zIndex: 1,
-            }}
-          />
-          {/* Static holographic foil */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: [
-                'linear-gradient(135deg,',
-                'hsla(0,100%,65%,0.1) 0%,',
-                'hsla(60,100%,65%,0.1) 25%,',
-                'hsla(180,100%,65%,0.1) 50%,',
-                'hsla(270,100%,65%,0.1) 75%,',
-                'hsla(360,100%,65%,0.1) 100%)',
-              ].join(' '),
-              mixBlendMode: 'screen' as const,
-              zIndex: 2,
-            }}
-          />
-          {/* Shimmer */}
-          <div className="card-shimmer" style={{ zIndex: 1 }} />
-          <div style={{ position: 'relative', zIndex: 3 }}>
-            <CompanyLogo company={company} size={52} />
-          </div>
-          <p
-            className="text-xs font-black tracking-widest mt-2 relative"
-            style={{ color: 'rgba(255,255,255,0.12)', zIndex: 3 }}
-          >
-            {company.ticker}
-          </p>
-          <div className="card-emboss" style={{ zIndex: 4 }} />
-        </div>
-      ) : (
-        <div style={{ width: '100%', height: '100%' }}>
-          <CardBack company={company} data={data} loading={loading} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Main landing card ─────────────────────────────────────────────────────────
-
-export const CARD_W = 220;
-export const CARD_H = 300;
-
-export default function TradingCard({
-  company,
+export function HoloCardWrapper({
+  children,
+  width,
+  height,
   onClick,
-  isSelected,
-  isOtherSelected,
 }: {
-  company: Company;
-  onClick: () => void;
-  isSelected: boolean;
-  isOtherSelected: boolean;
+  children: React.ReactNode;
+  width: number;
+  height: number;
+  onClick?: () => void;
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
@@ -284,48 +194,89 @@ export default function TradingCard({
   }, []);
 
   return (
+    <div
+      ref={wrapperRef}
+      className="card-holo-wrapper"
+      style={{ width, height, cursor: onClick ? 'pointer' : 'default' }}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onClick={onClick}
+    >
+      <motion.div
+        className="card-holo-inner w-full h-full"
+        animate={
+          wiggling
+            ? { rotate: [0, -3, 3, -2, 2, -1, 1, 0], transition: { duration: 0.45, ease: 'easeInOut' } }
+            : { rotate: 0 }
+        }
+        whileTap={onClick ? { scale: 0.96 } : undefined}
+      >
+        {children}
+        <div className="card-foil" />
+        <div className="card-glare" />
+        {isHovered && (
+          <div
+            className="absolute inset-0 rounded-xl pointer-events-none"
+            style={{ boxShadow: '0 0 0 1px rgba(79,209,232,0.5), 0 0 40px rgba(79,209,232,0.18)', zIndex: 5 }}
+          />
+        )}
+      </motion.div>
+    </div>
+  );
+}
+
+// ── MiniCard — full-size holographic card used in detail view left column ─────
+
+export function MiniCard({
+  company,
+  data,
+  loading,
+  face,
+}: {
+  company: Company;
+  data: StockData | null;
+  loading: boolean;
+  face: 'front' | 'back';
+}) {
+  return (
+    <HoloCardWrapper width={CARD_W} height={CARD_H}>
+      {face === 'front' ? (
+        <CardFront company={company} cardW={CARD_W} />
+      ) : (
+        <CardBack company={company} data={data} loading={loading} />
+      )}
+    </HoloCardWrapper>
+  );
+}
+
+// ── Main interactive landing card ─────────────────────────────────────────────
+
+export default function TradingCard({
+  company,
+  onClick,
+  isSelected,
+  isOtherSelected,
+}: {
+  company: Company;
+  onClick: () => void;
+  isSelected: boolean;
+  isOtherSelected: boolean;
+}) {
+  return (
     <motion.div
       initial={{ opacity: 1, scale: 1 }}
       animate={{
         opacity: isOtherSelected ? 0 : 1,
-        scale: isOtherSelected ? 0.85 : 1,
-        filter: isOtherSelected ? 'blur(2px)' : 'none',
+        scale:   isOtherSelected ? 0.85 : 1,
+        filter:  isOtherSelected ? 'blur(2px)' : 'none',
       }}
       transition={{ duration: 0.4, ease: 'easeInOut' }}
       style={{ display: isSelected ? 'none' : 'block' }}
     >
-      <div
-        ref={wrapperRef}
-        className="card-holo-wrapper cursor-pointer"
-        style={{ width: CARD_W, height: CARD_H }}
-        onMouseMove={handleMouseMove}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onClick={onClick}
-      >
-        <motion.div
-          className="card-holo-inner w-full h-full"
-          animate={
-            wiggling
-              ? { rotate: [0, -3, 3, -2, 2, -1, 1, 0], transition: { duration: 0.45, ease: 'easeInOut' } }
-              : { rotate: 0 }
-          }
-          whileTap={{ scale: 0.95 }}
-        >
-          <CardFront company={company} cardW={CARD_W} />
-          <div className="card-foil" />
-          <div className="card-glare" />
-          {isHovered && (
-            <div
-              className="absolute inset-0 rounded-xl pointer-events-none"
-              style={{
-                boxShadow: '0 0 0 1px rgba(79,209,232,0.5), 0 0 40px rgba(79,209,232,0.18)',
-                zIndex: 5,
-              }}
-            />
-          )}
-        </motion.div>
-      </div>
+      <HoloCardWrapper width={CARD_W} height={CARD_H} onClick={onClick}>
+        <CardFront company={company} cardW={CARD_W} />
+      </HoloCardWrapper>
     </motion.div>
   );
 }
