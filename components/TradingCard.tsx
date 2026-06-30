@@ -3,9 +3,9 @@
 import { useRef, useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Company, StockData, ValuationSignal } from '@/lib/types';
-import { getValuationSignal, formatBig, formatRatio, formatPrice } from '@/lib/constants';
+import { getValuationSignal, formatBig, formatPercent, formatPrice } from '@/lib/constants';
 
-// ── Inline SVG logos for brands that don't work well as single-color icons ──
+// ── Inline SVG logos ──────────────────────────────────────────────────────────
 
 function MsftLogo({ size }: { size: number }) {
   return (
@@ -21,24 +21,21 @@ function MsftLogo({ size }: { size: number }) {
 function GooglLogo({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
-      {/* Red — top arc */}
       <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-      {/* Blue — right arm */}
       <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-      {/* Yellow — left arc */}
       <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-      {/* Green — bottom arc */}
       <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
     </svg>
   );
 }
 
 function AmznLogo({ size }: { size: number }) {
+  // Black 'a' with orange smile — uses near-black stroke for brand correctness
   return (
     <svg width={size} height={size} viewBox="0 0 100 110" fill="none">
-      {/* lowercase 'a' — bowl + right stem */}
-      <circle cx="46" cy="44" r="26" stroke="white" strokeWidth="11" fill="none"/>
-      <line x1="72" y1="19" x2="72" y2="68" stroke="white" strokeWidth="11" strokeLinecap="round"/>
+      {/* lowercase 'a' — dark, blends with navy card */}
+      <circle cx="46" cy="44" r="26" stroke="#0d1120" strokeWidth="11" fill="none"/>
+      <line x1="72" y1="19" x2="72" y2="68" stroke="#0d1120" strokeWidth="11" strokeLinecap="round"/>
       {/* orange smile arrow */}
       <path d="M10 86 Q50 106 88 86" stroke="#FF9900" strokeWidth="7" strokeLinecap="round" fill="none"/>
       <path d="M80 80 L88 86 L80 92" stroke="#FF9900" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
@@ -46,13 +43,7 @@ function AmznLogo({ size }: { size: number }) {
   );
 }
 
-function CompanyLogo({
-  company,
-  size,
-}: {
-  company: Company;
-  size: number;
-}) {
+function CompanyLogo({ company, size }: { company: Company; size: number }) {
   if (company.ticker === 'MSFT') return <MsftLogo size={size} />;
   if (company.ticker === 'GOOGL') return <GooglLogo size={size} />;
   if (company.ticker === 'AMZN') return <AmznLogo size={size} />;
@@ -64,10 +55,8 @@ function CompanyLogo({
       alt={company.shortName}
       width={size}
       height={size}
-      style={{ objectFit: 'contain', filter: 'drop-shadow(0 0 12px rgba(255,255,255,0.15))' }}
-      onError={(e) => {
-        (e.currentTarget as HTMLImageElement).style.display = 'none';
-      }}
+      style={{ objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.12))' }}
+      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
     />
   );
 }
@@ -75,21 +64,20 @@ function CompanyLogo({
 // ── Card front ────────────────────────────────────────────────────────────────
 
 function CardFront({ company, cardW }: { company: Company; cardW: number }) {
-  const logoSize = Math.round(cardW * 0.48);
+  const logoSize = Math.round(cardW * 0.5);
   return (
     <div
-      className="relative w-full h-full rounded-xl overflow-hidden flex flex-col items-center justify-center"
-      style={{
-        background: 'linear-gradient(145deg, #0d0d1a 0%, #111127 50%, #0d0d1a 100%)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)',
-      }}
+      className="card-navy-base relative w-full h-full rounded-xl overflow-hidden flex flex-col items-center justify-center"
     >
-      <div className="absolute inset-0" style={{ background: company.cardTint, borderRadius: 'inherit' }} />
+      <div className="card-glass-sheen" />
       <div className="card-shimmer" />
       <div className="relative z-10 flex items-center justify-center">
         <CompanyLogo company={company} size={logoSize} />
       </div>
-      <p className="relative z-10 mt-3 text-xs font-semibold tracking-widest opacity-40 uppercase">
+      <p
+        className="relative z-10 mt-4 text-sm font-black tracking-widest uppercase"
+        style={{ color: 'rgba(255, 255, 255, 0.12)' }}
+      >
         {company.ticker}
       </p>
       <div className="card-emboss" />
@@ -99,44 +87,61 @@ function CardFront({ company, cardW }: { company: Company; cardW: number }) {
 
 // ── Card back ─────────────────────────────────────────────────────────────────
 
+function StatRow({ label, value, badge }: { label: string; value: string; badge?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
+      <span className="text-gray-500 text-xs">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-gray-200 text-xs font-medium tabular-nums">{value}</span>
+        {badge}
+      </div>
+    </div>
+  );
+}
+
 function CardBack({ company, data, loading }: { company: Company; data: StockData | null; loading: boolean }) {
   const signal: ValuationSignal = data ? getValuationSignal(data.forwardPE) : 'N/A';
   const signalClass =
     signal === 'CHEAP' ? 'badge-cheap' : signal === 'FAIR' ? 'badge-fair' : signal === 'RICH' ? 'badge-rich' : 'badge-na';
 
+  const fwdPE = data?.forwardPE != null ? `${data.forwardPE.toFixed(1)}x` : 'N/A';
+  const revGrowth = data?.revenueGrowth != null ? `${(data.revenueGrowth * 100).toFixed(1)}%` : 'N/A';
+  const profitMgn = data?.profitMargin != null ? `${(data.profitMargin * 100).toFixed(1)}%` : 'N/A';
+
   return (
-    <div
-      className="relative w-full h-full rounded-xl overflow-hidden flex flex-col p-4"
-      style={{ background: 'linear-gradient(145deg, #0d0d1a 0%, #111127 100%)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}
-    >
-      <div className="absolute inset-0" style={{ background: company.cardTint, borderRadius: 'inherit' }} />
+    <div className="card-navy-base relative w-full h-full rounded-xl overflow-hidden flex flex-col p-4">
+      <div className="card-glass-sheen" />
       <div className="card-emboss" />
       <div className="relative z-10 flex flex-col h-full">
         <div className="flex items-center gap-2 mb-3">
-          <CompanyLogo company={company} size={18} />
+          <CompanyLogo company={company} size={16} />
           <span className="text-xs font-bold tracking-wider" style={{ color: company.brandColor }}>
             {company.ticker}
           </span>
         </div>
 
         {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div
-              className="w-4 h-4 rounded-full border-2 animate-spin"
-              style={{ borderColor: `${company.brandColor} transparent transparent transparent` }}
-            />
+          <div className="flex-1 flex flex-col gap-2 justify-center">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="skeleton h-3 rounded" style={{ width: `${75 + (i % 3) * 10}%`, opacity: 0.7 }} />
+            ))}
           </div>
         ) : data ? (
           <div className="flex-1 flex flex-col justify-between">
-            <div className="space-y-2">
-              <StatRow label="Price"   value={formatPrice(data.price)} />
-              <StatRow label="P/E"     value={formatRatio(data.peRatio)} />
-              <StatRow label="Fwd P/E" value={formatRatio(data.forwardPE)} />
-              <StatRow label="Mkt Cap" value={formatBig(data.marketCap)} />
-              <StatRow label="EPS"     value={data.eps != null ? `$${data.eps.toFixed(2)}` : 'N/A'} />
-            </div>
-            <div className={`mt-3 px-2 py-1 rounded-md text-center text-xs font-bold tracking-widest ${signalClass}`}>
-              {signal}
+            <div>
+              <StatRow label="Price" value={formatPrice(data.price)} />
+              <StatRow
+                label="Fwd P/E"
+                value={fwdPE}
+                badge={
+                  <span className={`text-[8px] px-1 py-0.5 rounded font-black tracking-wider ${signalClass}`}>
+                    {signal}
+                  </span>
+                }
+              />
+              <StatRow label="Mkt Cap"    value={formatBig(data.marketCap)} />
+              <StatRow label="Rev Growth" value={revGrowth} />
+              <StatRow label="Prft Mrgn"  value={profitMgn} />
             </div>
           </div>
         ) : (
@@ -149,16 +154,7 @@ function CardBack({ company, data, loading }: { company: Company; data: StockDat
   );
 }
 
-function StatRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-gray-500 text-xs">{label}</span>
-      <span className="text-gray-200 text-xs font-medium tabular-nums">{value}</span>
-    </div>
-  );
-}
-
-// ── Mini card (used in detail view) ──────────────────────────────────────────
+// ── Mini card (detail view) — includes static holographic effects ─────────────
 
 export function MiniCard({
   company,
@@ -173,18 +169,61 @@ export function MiniCard({
 }) {
   const w = 130;
   const h = 182;
+
   return (
-    <div style={{ width: w, height: h, borderRadius: 10, overflow: 'hidden', border: '1px solid #1e1e3a', flexShrink: 0 }}>
+    <div
+      style={{
+        width: w,
+        height: h,
+        borderRadius: 10,
+        overflow: 'hidden',
+        flexShrink: 0,
+        border: '1px solid rgba(79, 209, 232, 0.4)',
+        boxShadow: 'inset 0 0 20px rgba(79, 209, 232, 0.06), 0 0 20px rgba(79, 209, 232, 0.08)',
+        position: 'relative',
+      }}
+    >
       {face === 'front' ? (
         <div
           className="w-full h-full flex flex-col items-center justify-center relative"
-          style={{ background: 'linear-gradient(145deg, #0d0d1a, #111127)' }}
+          style={{ background: 'linear-gradient(to bottom, #1a1f35 0%, #0a0a14 100%)' }}
         >
-          <div className="absolute inset-0" style={{ background: company.cardTint }} />
-          <div style={{ position: 'relative', zIndex: 1 }}>
+          {/* Glass sheen */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 30%, transparent 55%)',
+              zIndex: 1,
+            }}
+          />
+          {/* Static holographic foil */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: [
+                'linear-gradient(135deg,',
+                'hsla(0,100%,65%,0.1) 0%,',
+                'hsla(60,100%,65%,0.1) 25%,',
+                'hsla(180,100%,65%,0.1) 50%,',
+                'hsla(270,100%,65%,0.1) 75%,',
+                'hsla(360,100%,65%,0.1) 100%)',
+              ].join(' '),
+              mixBlendMode: 'screen' as const,
+              zIndex: 2,
+            }}
+          />
+          {/* Shimmer */}
+          <div className="card-shimmer" style={{ zIndex: 1 }} />
+          <div style={{ position: 'relative', zIndex: 3 }}>
             <CompanyLogo company={company} size={52} />
           </div>
-          <p className="text-xs font-bold tracking-widest opacity-40 mt-2 relative z-10">{company.ticker}</p>
+          <p
+            className="text-xs font-black tracking-widest mt-2 relative"
+            style={{ color: 'rgba(255,255,255,0.12)', zIndex: 3 }}
+          >
+            {company.ticker}
+          </p>
+          <div className="card-emboss" style={{ zIndex: 4 }} />
         </div>
       ) : (
         <div style={{ width: '100%', height: '100%' }}>
@@ -197,8 +236,8 @@ export function MiniCard({
 
 // ── Main landing card ─────────────────────────────────────────────────────────
 
-export const CARD_W = 185;
-export const CARD_H = 260;
+export const CARD_W = 220;
+export const CARD_H = 300;
 
 export default function TradingCard({
   company,
@@ -279,7 +318,10 @@ export default function TradingCard({
           {isHovered && (
             <div
               className="absolute inset-0 rounded-xl pointer-events-none"
-              style={{ boxShadow: '0 0 0 1px rgba(79,209,232,0.4), 0 0 30px rgba(79,209,232,0.15)', zIndex: 5 }}
+              style={{
+                boxShadow: '0 0 0 1px rgba(79,209,232,0.5), 0 0 40px rgba(79,209,232,0.18)',
+                zIndex: 5,
+              }}
             />
           )}
         </motion.div>
