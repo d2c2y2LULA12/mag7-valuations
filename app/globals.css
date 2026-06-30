@@ -1,0 +1,257 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paradise: #4FD1E8;
+  --paradise-dim: #2BA8BE;
+  --paradise-glow: rgba(79, 209, 232, 0.25);
+  --bg: #0a0a0a;
+  --card-bg: #0d0d1a;
+  --card-border: #1e1e3a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background-color: var(--bg);
+  color: #e5e7eb;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Holographic card CSS */
+.card-holo-wrapper {
+  --holo-x: 50%;
+  --holo-y: 50%;
+  --holo-angle: 135deg;
+  --rotate-x: 0deg;
+  --rotate-y: 0deg;
+  --glow-opacity: 0;
+  --shine-opacity: 0;
+  perspective: 800px;
+}
+
+.card-holo-inner {
+  transform: perspective(800px) rotateX(var(--rotate-x)) rotateY(var(--rotate-y));
+  transition: transform 0.15s ease-out, box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+  will-change: transform;
+  border-radius: 12px;
+  position: relative;
+}
+
+.card-holo-wrapper:hover .card-holo-inner {
+  transition: transform 0.05s linear;
+  box-shadow:
+    0 0 20px var(--paradise-glow),
+    0 0 60px rgba(79, 209, 232, 0.1),
+    0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+/* Rainbow foil overlay */
+.card-foil {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    radial-gradient(
+      ellipse at var(--holo-x) var(--holo-y),
+      rgba(255, 255, 255, 0.35) 0%,
+      rgba(255, 255, 255, 0.05) 40%,
+      transparent 70%
+    ),
+    linear-gradient(
+      var(--holo-angle),
+      hsla(0, 100%, 65%, 0.18) 0%,
+      hsla(30, 100%, 65%, 0.18) 12%,
+      hsla(60, 100%, 65%, 0.18) 24%,
+      hsla(120, 100%, 65%, 0.18) 36%,
+      hsla(180, 100%, 65%, 0.18) 48%,
+      hsla(220, 100%, 65%, 0.18) 60%,
+      hsla(270, 100%, 65%, 0.18) 72%,
+      hsla(310, 100%, 65%, 0.18) 84%,
+      hsla(360, 100%, 65%, 0.18) 100%
+    );
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card-holo-wrapper:hover .card-foil {
+  opacity: 1;
+}
+
+/* Glossy glare overlay */
+.card-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 3;
+  background: radial-gradient(
+    circle at var(--holo-x) var(--holo-y),
+    rgba(255, 255, 255, 0.12) 0%,
+    transparent 55%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card-holo-wrapper:hover .card-glare {
+  opacity: 1;
+}
+
+/* Embossed border */
+.card-emboss {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 4;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Shimmer sweep animation */
+.card-shimmer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.04) 50%,
+    transparent 60%
+  );
+  background-size: 200% auto;
+  animation: shimmerSweep 4s linear infinite;
+}
+
+@keyframes shimmerSweep {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Card flip */
+.card-flip-container {
+  perspective: 1000px;
+}
+
+.card-flip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.65s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+.card-flip-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+}
+
+.card-face-back {
+  transform: rotateY(180deg);
+}
+
+/* Valuation badge */
+.badge-cheap {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-fair {
+  background: rgba(245, 158, 11, 0.15);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-rich {
+  background: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-na {
+  background: rgba(107, 114, 128, 0.15);
+  color: #6B7280;
+  border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+/* Paradise blue glow effect */
+.glow-paradise {
+  box-shadow: 0 0 20px var(--paradise-glow), 0 0 40px rgba(79, 209, 232, 0.08);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e1e3a;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4FD1E8;
+}
+
+/* Table styles */
+.fin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.fin-table th {
+  text-align: right;
+  padding: 6px 12px;
+  color: #6B7280;
+  font-weight: 500;
+  border-bottom: 1px solid #1e1e3a;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fin-table th:first-child {
+  text-align: left;
+}
+
+.fin-table td {
+  text-align: right;
+  padding: 7px 12px;
+  color: #d1d5db;
+  border-bottom: 1px solid rgba(30, 30, 58, 0.5);
+}
+
+.fin-table td:first-child {
+  text-align: left;
+  color: #9ca3af;
+}
+
+.fin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.fin-table tr:hover td {
+  background: rgba(79, 209, 232, 0.03);
+}
