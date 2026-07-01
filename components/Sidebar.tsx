@@ -158,10 +158,11 @@ export default function Sidebar({ isOpen, onClose, onNavigateHome, onNavigateToC
 
             {/* Footer */}
             <div
-              className="px-5 py-4 border-t text-xs text-gray-700"
+              className="px-5 py-4 border-t text-xs text-gray-700 space-y-1"
               style={{ borderColor: 'rgba(79, 209, 232, 0.1)' }}
             >
-              Data: Yahoo Finance via yfinance
+              <div>Data: Yahoo Finance via yfinance</div>
+              <div>Built by Donovan Young</div>
             </div>
           </motion.div>
         </>
