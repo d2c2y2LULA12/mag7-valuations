@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CARD_W, CARD_H, CardFront, HoloCardWrapper } from '@/components/TradingCard';
 import StockDetail from '@/components/StockDetail';
@@ -515,22 +515,7 @@ function PackScene({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-// ── Rolodex ───────────────────────────────────────────────────────────────────
-
-const ARC_SPACING = 194;
-const ARC_CURVE = 28;
-
-function getArcT(offset: number) {
-  const abs = Math.abs(offset);
-  return {
-    x: offset * ARC_SPACING,
-    y: abs * abs * ARC_CURVE,
-    scale: 1 - abs * 0.075,
-    rotateY: offset * 13,
-    zIndex: 20 - Math.round(abs * 2),
-    opacity: abs > 3.3 ? 0 : 1,
-  };
-}
+// ── Card Row ──────────────────────────────────────────────────────────────────
 
 function RolodexScene({
   onSelectCompany,
@@ -539,38 +524,8 @@ function RolodexScene({
   onSelectCompany: (c: Company) => void;
   onOpenSidebar: () => void;
 }) {
-  const n = COMPANIES.length;
-  const [centerIdx, setCenterIdx] = useState(0);
-  const [isIntro, setIsIntro] = useState(true);
-  const touchStartX = useRef(0);
-
-  // End intro after cards have flown in
-  useEffect(() => {
-    const t = setTimeout(() => setIsIntro(false), 1200);
-    return () => clearTimeout(t);
-  }, []);
-
-  // Wheel rotation
-  useEffect(() => {
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      setCenterIdx(i => (i + (e.deltaY > 0 ? 1 : -1) + n) % n);
-    };
-    window.addEventListener('wheel', onWheel, { passive: false });
-    return () => window.removeEventListener('wheel', onWheel);
-  }, [n]);
-
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-  }, []);
-
-  const onTouchEnd = useCallback((e: React.TouchEvent) => {
-    const delta = touchStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(delta) > 50) setCenterIdx(i => (i + (delta > 0 ? 1 : -1) + n) % n);
-  }, [n]);
-
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: '#0a0a0a' }}>
+    <div className="flex flex-col h-screen overflow-hidden" style={{ background: '#0a0a0a' }}>
       {/* Header */}
       <div className="flex-shrink-0 pt-6 px-6">
         <HamburgerButton onClick={onOpenSidebar} />
@@ -584,74 +539,35 @@ function RolodexScene({
             Mag 7 <span style={{ color: '#4FD1E8' }}>Valuations</span>
           </h1>
           <p className="text-gray-400 text-base sm:text-lg">
-            Scroll or swipe to browse · Click to dive in
+            Click a card to dive in
           </p>
         </motion.div>
       </div>
 
-      {/* Arc */}
-      <div
-        className="flex-1 flex items-center justify-center overflow-hidden"
-        style={{ perspective: '1100px' }}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
-        <div className="relative" style={{ width: CARD_W, height: CARD_H }}>
-          {COMPANIES.map((company, i) => {
-            let offset = i - centerIdx;
-            if (offset > n / 2) offset -= n;
-            if (offset < -n / 2) offset += n;
-            const t = getArcT(offset);
-            const abs = Math.abs(offset);
-            const isCenter = offset === 0;
-
-            return (
-              <motion.div
-                key={company.ticker}
-                className="absolute inset-0"
-                initial={isIntro ? { x: 0, y: 60, scale: 0.15, opacity: 0, rotateY: 0 } : false}
-                animate={{
-                  x: t.x,
-                  y: t.y,
-                  scale: t.scale,
-                  rotateY: t.rotateY,
-                  zIndex: t.zIndex,
-                  opacity: t.opacity,
-                }}
-                transition={{
-                  type: 'spring',
-                  stiffness: isIntro ? 180 : 280,
-                  damping: isIntro ? 22 : 30,
-                  delay: isIntro ? abs * 0.09 : 0,
-                }}
+      {/* Card row */}
+      <div className="flex-1 flex items-center justify-center px-6 overflow-x-auto overflow-y-hidden">
+        <div className="flex gap-4">
+          {COMPANIES.map((company, i) => (
+            <motion.div
+              key={company.ticker}
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 24, delay: i * 0.07 }}
+            >
+              <HoloCardWrapper
+                width={CARD_W}
+                height={CARD_H}
+                onClick={() => onSelectCompany(company)}
               >
-                <HoloCardWrapper
-                  width={CARD_W}
-                  height={CARD_H}
-                  onClick={isCenter ? () => onSelectCompany(company) : () => setCenterIdx(i)}
-                >
-                  <CardFront company={company} cardW={CARD_W} />
-                </HoloCardWrapper>
-              </motion.div>
-            );
-          })}
+                <CardFront company={company} cardW={CARD_W} />
+              </HoloCardWrapper>
+            </motion.div>
+          ))}
         </div>
       </div>
 
-      {/* Current card label */}
-      <motion.div
-        key={centerIdx}
-        initial={{ opacity: 0, y: 4 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
-        className="text-center pb-3"
-      >
-        <p className="text-sm font-semibold text-white">{COMPANIES[centerIdx].name}</p>
-        <p className="text-xs text-gray-600 mt-0.5">{COMPANIES[centerIdx].ticker} · Click to view</p>
-      </motion.div>
-
       {/* Footer */}
-      <div className="flex-shrink-0 pb-5 px-6 text-center text-xs text-gray-700">
+      <div className="flex-shrink-0 pb-4 px-6 text-center text-xs text-gray-700">
         Data: Yahoo Finance
       </div>
     </div>
@@ -696,6 +612,7 @@ export default function Home() {
         onClose={() => setSidebarOpen(false)}
         onNavigateHome={handleNavigateHome}
         onNavigateToCompany={handleNavigateToCompany}
+        onReopenPack={() => { setPhase('pack'); setSidebarOpen(false); }}
       />
 
       <div className="relative" style={{ minHeight: '100vh', background: '#0a0a0a' }}>

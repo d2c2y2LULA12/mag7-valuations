@@ -9,6 +9,7 @@ interface SidebarProps {
   onClose: () => void;
   onNavigateHome: () => void;
   onNavigateToCompany: (company: Company) => void;
+  onReopenPack?: () => void;
 }
 
 // Simple inline logo dots for sidebar (brand colored)
@@ -51,7 +52,7 @@ function SidebarLogo({ company }: { company: Company }) {
   );
 }
 
-export default function Sidebar({ isOpen, onClose, onNavigateHome, onNavigateToCompany }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, onNavigateHome, onNavigateToCompany, onReopenPack }: SidebarProps) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -114,6 +115,20 @@ export default function Sidebar({ isOpen, onClose, onNavigateHome, onNavigateToC
                 </svg>
                 Home
               </button>
+
+              {onReopenPack && (
+                <button
+                  onClick={() => { onReopenPack(); onClose(); }}
+                  className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="2" width="10" height="12" rx="1.5"/>
+                    <line x1="6" y1="5" x2="10" y2="5"/>
+                    <line x1="6" y1="8" x2="10" y2="8"/>
+                  </svg>
+                  Reopen Pack
+                </button>
+              )}
 
               <div
                 className="mx-5 my-2 border-t"

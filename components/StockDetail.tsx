@@ -8,6 +8,32 @@ import { HamburgerButton } from './Sidebar';
 import FinancialTables from './FinancialTables';
 import StockCharts from './StockChart';
 import { formatBig, formatRatio, formatPrice, getValuationSignal } from '@/lib/constants';
+import InfoTip from './InfoTip';
+
+const TIPS: Record<string, string> = {
+  'Price':            'The current price one share of stock will cost you. It moves every second the market is open based on buyers and sellers.',
+  'Market Cap':       'Total value of all shares combined. Think of it as the price tag the market puts on the whole company right now.',
+  'P/E Ratio':        'Price divided by earnings per share. It tells you how much investors are willing to pay for every $1 the company earns. Higher means more hype, lower can mean a bargain — or a red flag.',
+  'Forward P/E':      'Same idea as P/E, but uses next year\'s expected earnings instead of last year\'s. It\'s a bet on where the company is headed.',
+  'EPS (TTM)':        'Earnings Per Share over the last 12 months. How much profit the company made for each share of stock. Higher is better.',
+  'Revenue':          'Total money brought in from sales before any expenses are taken out. The top line of the income statement.',
+  'Revenue Growth':   'How much revenue grew compared to the same period last year. 10%+ for a company this size is solid.',
+  'Profit Margin':    'Percentage of revenue that ends up as actual profit after all costs. A 20% margin means they keep $0.20 of every $1 in sales.',
+  'Return on Equity': 'How efficiently the company turns shareholder money into profit. 15%+ is generally considered strong.',
+  'EPS (TTM) stat':   'Earnings Per Share — the profit the company earns per share over the last 12 months.',
+  'Debt / Equity':    'How much debt the company carries relative to shareholder equity. Lower is safer. Very high debt can be risky if revenue slows.',
+  'Free Cash Flow':   'Cash left over after paying for operations and investments. This is the money the company can use to buy back stock, pay dividends, or invest in growth.',
+  'Price / Sales':    'Stock price relative to revenue. Useful when a company isn\'t profitable yet — it shows how much you\'re paying per dollar of sales.',
+  'EV / EBITDA':      'Enterprise Value divided by earnings before interest, taxes, depreciation, and amortization. A way to compare companies regardless of how they\'re financed. Lower generally means cheaper.',
+  'Analyst Ratings':  'Wall Street analysts who cover the stock publish Buy, Hold, or Sell recommendations. This shows the breakdown across all analysts currently covering it.',
+  'Valuation Signal': 'A quick read based on Forward P/E. Under 20x is CHEAP by Mag 7 standards, 20–30x is FAIR, above 30x is RICH. It\'s one signal, not the whole story.',
+  'High Today':       'The highest price the stock traded at today during market hours.',
+  'Low Today':        'The lowest price the stock traded at today during market hours.',
+  '52W High':         'The highest price the stock has traded at in the last 52 weeks. Useful for seeing how far off the stock is from its recent peak.',
+  '52W Low':          'The lowest price in the last 52 weeks. Seeing a stock near its 52-week low can signal either a buying opportunity or a reason to dig deeper.',
+  'Volume':           'Number of shares traded today. High volume means a lot of activity — could be news, earnings, or just momentum.',
+  'Avg Volume':       'The average number of shares traded per day over the past few months. Comparing today\'s volume to this tells you if trading is unusually heavy or light.',
+};
 
 function fmtVol(v: number | null): string {
   if (v == null) return 'N/A';
@@ -94,7 +120,10 @@ function buildStats(data: StockData): StatBarConfig[] {
 function FIFAStatBar({ stat }: { stat: StatBarConfig }) {
   return (
     <div className="flex items-center gap-4 py-2.5 border-b border-[#1a1a2e] last:border-0">
-      <span className="text-sm text-gray-400 w-36 flex-shrink-0">{stat.label}</span>
+      <span className="text-sm text-gray-400 w-36 flex-shrink-0 flex items-center">
+        {stat.label}
+        {TIPS[stat.label] && <InfoTip text={TIPS[stat.label]} />}
+      </span>
       <span className="text-sm font-mono font-semibold text-white w-20 text-right flex-shrink-0 tabular-nums">
         {stat.display}
       </span>
@@ -196,7 +225,10 @@ function ValBar({ m }: { m: ValMetric }) {
   return (
     <div className="mb-7">
       <div className="flex justify-between mb-2">
-        <span className="text-sm text-gray-300 font-medium">{m.label}</span>
+        <span className="text-sm text-gray-300 font-medium flex items-center">
+          {m.label}
+          {TIPS[m.label] && <InfoTip text={TIPS[m.label]} />}
+        </span>
         <div className="flex items-center gap-2">
           <span className="text-lg font-semibold text-white tabular-nums">
             {m.value.toFixed(1)}{m.suffix ?? 'x'}
@@ -270,7 +302,10 @@ function ValuationTab({ data, loading }: { data: StockData | null; loading: bool
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <div className="rounded-xl border border-[#1e1e3a] p-5 mb-6 flex items-center justify-between" style={{ background: 'rgba(13,13,26,0.7)' }}>
         <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Valuation Signal</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center">
+            Valuation Signal
+            <InfoTip text={TIPS['Valuation Signal']} />
+          </p>
           <p className="text-xs text-gray-600">Based on Forward P/E vs. 20 / 30 thresholds</p>
         </div>
         <span className={`text-xl font-black tracking-widest px-4 py-2 rounded-lg ${signalClass}`}>{signal}</span>
@@ -359,7 +394,10 @@ function KeyStatsSection({ data, loading }: { data: StockData | null; loading: b
       <div className="grid grid-cols-3 gap-4">
         {stats.map(({ label, value }) => (
           <div key={label}>
-            <p className="text-xs text-gray-600 mb-0.5">{label}</p>
+            <p className="text-xs text-gray-600 mb-0.5 flex items-center">
+              {label}
+              {TIPS[label] && <InfoTip text={TIPS[label]} />}
+            </p>
             <p className="text-sm font-semibold text-gray-200 tabular-nums">{value}</p>
           </div>
         ))}
@@ -412,7 +450,10 @@ function AnalystRatingsSection({ data, loading }: { data: StockData | null; load
 
   return (
     <div className="rounded-xl border border-[#1e1e3a] p-5 mb-6" style={{ background: 'rgba(13,13,26,0.7)' }}>
-      <p className="text-xs text-gray-500 uppercase tracking-wider mb-4">Analyst Ratings</p>
+      <p className="text-xs text-gray-500 uppercase tracking-wider mb-4 flex items-center">
+        Analyst Ratings
+        <InfoTip text={TIPS['Analyst Ratings']} />
+      </p>
       <div className="flex gap-6 items-center">
         {/* Buy % circle */}
         <div className="relative flex-shrink-0 w-24 h-24 flex items-center justify-center">
@@ -467,7 +508,10 @@ function AnalystRatingsSection({ data, loading }: { data: StockData | null; load
 function KeyMetric({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="flex flex-col gap-0.5 p-4 rounded-xl border border-[#1e1e3a]" style={{ background: 'rgba(13,13,26,0.7)' }}>
-      <span className="text-xs text-gray-500 uppercase tracking-wider">{label}</span>
+      <span className="text-xs text-gray-500 uppercase tracking-wider flex items-center">
+        {label}
+        {TIPS[label] && <InfoTip text={TIPS[label]} />}
+      </span>
       <span className="text-lg font-semibold text-gray-100 tabular-nums">{value}</span>
       {sub && <span className="text-xs text-gray-600">{sub}</span>}
     </div>
