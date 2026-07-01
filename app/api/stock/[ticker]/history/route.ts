@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import YahooFinance from 'yahoo-finance2';
-const yf = new YahooFinance();
+const yf = new YahooFinance({ suppressNotices: ['ripHistorical'] as any });
 
 const ALLOWED = new Set(['META', 'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'NVDA', 'TSLA']);
 
@@ -14,14 +14,18 @@ const PERIOD_MAP: Record<string, { months?: number; years?: number; ytd?: boolea
   'ALL': { max: true,  interval: '1wk' },
 };
 
-function periodStart(cfg: typeof PERIOD_MAP[string]): Date {
+function toDateStr(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function periodStart(cfg: typeof PERIOD_MAP[string]): string {
   const now = new Date();
-  if (cfg.max) return new Date('2000-01-01');
-  if (cfg.ytd) return new Date(now.getFullYear(), 0, 1);
+  if (cfg.max) return '2000-01-01';
+  if (cfg.ytd) return `${now.getFullYear()}-01-01`;
   const d = new Date(now);
   if (cfg.months) d.setMonth(d.getMonth() - cfg.months);
   if (cfg.years)  d.setFullYear(d.getFullYear() - cfg.years);
-  return d;
+  return toDateStr(d);
 }
 
 function safe(val: unknown): number | null {
@@ -42,11 +46,14 @@ export async function GET(
   }
 
   const cfg = PERIOD_MAP[period] ?? PERIOD_MAP['1Y'];
+  const p1  = periodStart(cfg);
+  const p2  = toDateStr(new Date());
 
   try {
-    const [hist, quote] = await Promise.all([
-      yf.historical(ticker, {
-        period1: periodStart(cfg),
+    const [chartResult, quote] = await Promise.all([
+      yf.chart(ticker, {
+        period1:  p1,
+        period2:  p2,
         interval: cfg.interval,
       }, { validateResult: false }),
       yf.quoteSummary(ticker, {
@@ -55,13 +62,14 @@ export async function GET(
     ]);
 
     const eps = safe((quote.defaultKeyStatistics as any)?.trailingEps);
+    const quotes = (chartResult as any)?.quotes ?? [];
 
-    const data = hist
-      .filter(h => h.close != null)
-      .map(h => ({
-        date:  h.date.toISOString().slice(0, 10),
-        price: Math.round(h.close! * 100) / 100,
-        pe:    eps && eps > 0 ? Math.round((h.close! / eps) * 100) / 100 : null,
+    const data = quotes
+      .filter((h: any) => h.close != null)
+      .map((h: any) => ({
+        date:  typeof h.date === 'string' ? h.date.slice(0, 10) : new Date(h.date).toISOString().slice(0, 10),
+        price: Math.round(h.close * 100) / 100,
+        pe:    eps && eps > 0 ? Math.round((h.close / eps) * 100) / 100 : null,
       }));
 
     return NextResponse.json({ ticker, period, data });
