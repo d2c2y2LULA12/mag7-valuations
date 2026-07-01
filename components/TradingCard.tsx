@@ -35,8 +35,8 @@ function GooglLogo({ size }: { size: number }) {
 function AmznLogo({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 110" fill="none">
-      <circle cx="46" cy="44" r="26" stroke="#0d1120" strokeWidth="11" fill="none"/>
-      <line x1="72" y1="19" x2="72" y2="68" stroke="#0d1120" strokeWidth="11" strokeLinecap="round"/>
+      <circle cx="46" cy="44" r="26" stroke="#000000" strokeWidth="11" fill="none"/>
+      <line x1="72" y1="19" x2="72" y2="68" stroke="#000000" strokeWidth="11" strokeLinecap="round"/>
       <path d="M10 86 Q50 106 88 86" stroke="#FF9900" strokeWidth="7" strokeLinecap="round" fill="none"/>
       <path d="M80 80 L88 86 L80 92" stroke="#FF9900" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
     </svg>

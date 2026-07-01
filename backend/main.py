@@ -119,6 +119,39 @@ def parse_cashflow(df: pd.DataFrame) -> List[Dict]:
     return rows
 
 
+def fetch_analyst_ratings(stock: Any, info: Dict) -> Optional[Dict]:
+    mean = safe(info.get("recommendationMean"))
+    key = info.get("recommendationKey") or ""
+    total_raw = info.get("numberOfAnalystOpinions")
+    total = int(total_raw) if total_raw else None
+
+    buy = hold = sell = 0
+    try:
+        recs = stock.recommendations
+        if recs is not None and not recs.empty:
+            cols = recs.columns.tolist()
+            if "period" in cols:
+                row = recs[recs["period"] == "0m"]
+                if row.empty:
+                    row = recs.iloc[[-1]]
+                r = row.iloc[0]
+                buy = int(r.get("strongBuy", 0) or 0) + int(r.get("buy", 0) or 0)
+                hold = int(r.get("hold", 0) or 0)
+                sell = int(r.get("sell", 0) or 0) + int(r.get("strongSell", 0) or 0)
+    except Exception:
+        pass
+
+    computed = buy + hold + sell
+    return {
+        "mean": mean,
+        "key": key,
+        "total": total or (computed if computed > 0 else None),
+        "buy": buy,
+        "hold": hold,
+        "sell": sell,
+    }
+
+
 def fetch_ticker(ticker: str) -> Dict:
     stock = yf.Ticker(ticker)
     info = stock.info
@@ -172,6 +205,14 @@ def fetch_ticker(ticker: str) -> Dict:
         "freeCashFlow": safe(info.get("freeCashflow")),
         "priceToSales": safe(info.get("priceToSalesTrailingTwelveMonths")),
         "evToEbitda": safe(info.get("enterpriseToEbitda")),
+        "summary": info.get("longBusinessSummary") or None,
+        "dayHigh": safe(info.get("dayHigh")),
+        "dayLow": safe(info.get("dayLow")),
+        "fiftyTwoWeekHigh": safe(info.get("fiftyTwoWeekHigh")),
+        "fiftyTwoWeekLow": safe(info.get("fiftyTwoWeekLow")),
+        "volume": safe(info.get("volume")),
+        "averageVolume": safe(info.get("averageVolume")),
+        "analystRatings": fetch_analyst_ratings(stock, info),
         "incomeStatements": income_rows,
         "balanceSheets": parse_balance(balance_df),
         "cashFlows": parse_cashflow(cashflow_df),

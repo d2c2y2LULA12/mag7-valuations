@@ -183,10 +183,10 @@ export default function Home() {
                   transition={{ duration: 0.45 }}
                   className="text-center mt-4"
                 >
-                  <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2 text-white">
+                  <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-3 text-white">
                     Mag 7 <span style={{ color: '#4FD1E8' }}>Valuations</span>
                   </h1>
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-gray-400 text-base sm:text-lg">
                     Live financials for the Magnificent Seven. Click a card to dive in.
                   </p>
                 </motion.div>

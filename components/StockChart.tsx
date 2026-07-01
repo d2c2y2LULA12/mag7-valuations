@@ -120,7 +120,10 @@ function ChartCard({
   const latest = values[values.length - 1];
   const first = values[0];
   const change = ((latest - first) / first) * 100;
-  const positive = change >= 0;
+  const positive = (suffix === 'x' ? latest - first : change) >= 0;
+  const changeLabel = suffix === 'x'
+    ? `${positive ? '+' : ''}${(latest - first).toFixed(1)}x`
+    : `${positive ? '+' : ''}${change.toFixed(1)}%`;
 
   return (
     <div
@@ -139,7 +142,7 @@ function ChartCard({
             className="text-xs font-semibold tabular-nums"
             style={{ color: positive ? '#10B981' : '#EF4444' }}
           >
-            {positive ? '+' : ''}{change.toFixed(1)}%
+            {changeLabel}
           </p>
         </div>
       </div>

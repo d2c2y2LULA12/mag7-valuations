@@ -33,6 +33,15 @@ export interface CashFlowRow {
   freeCashFlow: number | null;
 }
 
+export interface AnalystRatings {
+  mean: number | null;
+  key: string;
+  total: number | null;
+  buy: number;
+  hold: number;
+  sell: number;
+}
+
 export interface StockData {
   ticker: string;
   price: number | null;
@@ -53,6 +62,14 @@ export interface StockData {
   freeCashFlow: number | null;
   priceToSales: number | null;
   evToEbitda: number | null;
+  summary: string | null;
+  dayHigh: number | null;
+  dayLow: number | null;
+  fiftyTwoWeekHigh: number | null;
+  fiftyTwoWeekLow: number | null;
+  volume: number | null;
+  averageVolume: number | null;
+  analystRatings: AnalystRatings | null;
   incomeStatements: IncomeStatementRow[];
   balanceSheets: BalanceSheetRow[];
   cashFlows: CashFlowRow[];

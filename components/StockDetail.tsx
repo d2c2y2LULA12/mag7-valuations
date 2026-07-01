@@ -9,6 +9,14 @@ import FinancialTables from './FinancialTables';
 import StockCharts from './StockChart';
 import { formatBig, formatRatio, formatPrice, getValuationSignal } from '@/lib/constants';
 
+function fmtVol(v: number | null): string {
+  if (v == null) return 'N/A';
+  if (v >= 1e9) return `${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(2)}M`;
+  if (v >= 1e3) return `${(v / 1e3).toFixed(1)}K`;
+  return v.toFixed(0);
+}
+
 type Tab = 'overview' | 'financials' | 'valuation';
 
 // ── Skeleton loaders ──────────────────────────────────────────────────────────
@@ -277,6 +285,177 @@ function ValuationTab({ data, loading }: { data: StockData | null; loading: bool
   );
 }
 
+// ── About section ─────────────────────────────────────────────────────────────
+
+function AboutSection({ summary, loading }: { summary: string | null | undefined; loading: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="mb-6 space-y-2">
+        <div className="skeleton rounded h-4 w-full" />
+        <div className="skeleton rounded h-4 w-11/12" />
+        <div className="skeleton rounded h-4 w-2/3" />
+      </div>
+    );
+  }
+  if (!summary) return null;
+
+  const sentences = summary.match(/[^.!?]+[.!?]+/g) ?? [summary];
+  const short = sentences.slice(0, 3).join(' ').trim();
+  const hasMore = sentences.length > 3;
+
+  return (
+    <div className="mb-6">
+      <p className="text-sm text-gray-400 leading-relaxed">
+        {expanded ? summary : short}
+        {hasMore && !expanded ? '…' : ''}
+      </p>
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="mt-1.5 text-xs hover:opacity-80 transition-opacity"
+          style={{ color: '#4FD1E8' }}
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── Key stats row ──────────────────────────────────────────────────────────────
+
+function KeyStatsSection({ data, loading }: { data: StockData | null; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-[#1e1e3a] p-5 mb-6" style={{ background: 'rgba(13,13,26,0.7)' }}>
+        <div className="skeleton rounded w-24 h-3 mb-4" />
+        <div className="grid grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="space-y-1">
+              <div className="skeleton rounded h-3 w-16" />
+              <div className="skeleton rounded h-4 w-20" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (!data) return null;
+
+  const stats = [
+    { label: 'High Today',  value: data.dayHigh != null ? `$${data.dayHigh.toFixed(2)}` : 'N/A' },
+    { label: 'Low Today',   value: data.dayLow  != null ? `$${data.dayLow.toFixed(2)}`  : 'N/A' },
+    { label: '52W High',    value: data.fiftyTwoWeekHigh != null ? `$${data.fiftyTwoWeekHigh.toFixed(2)}` : 'N/A' },
+    { label: '52W Low',     value: data.fiftyTwoWeekLow  != null ? `$${data.fiftyTwoWeekLow.toFixed(2)}`  : 'N/A' },
+    { label: 'Volume',      value: fmtVol(data.volume) },
+    { label: 'Avg Volume',  value: fmtVol(data.averageVolume) },
+  ];
+
+  return (
+    <div className="rounded-xl border border-[#1e1e3a] p-5 mb-6" style={{ background: 'rgba(13,13,26,0.7)' }}>
+      <p className="text-xs text-gray-500 uppercase tracking-wider mb-4">Key Stats</p>
+      <div className="grid grid-cols-3 gap-4">
+        {stats.map(({ label, value }) => (
+          <div key={label}>
+            <p className="text-xs text-gray-600 mb-0.5">{label}</p>
+            <p className="text-sm font-semibold text-gray-200 tabular-nums">{value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Analyst ratings ────────────────────────────────────────────────────────────
+
+function AnalystRatingsSection({ data, loading }: { data: StockData | null; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-[#1e1e3a] p-5 mb-6" style={{ background: 'rgba(13,13,26,0.7)' }}>
+        <div className="skeleton rounded w-36 h-3 mb-4" />
+        <div className="flex gap-6 items-center">
+          <div className="skeleton rounded-full w-24 h-24 flex-shrink-0" />
+          <div className="flex-1 space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton rounded h-3 w-full" />)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const r = data?.analystRatings;
+  if (!r) return null;
+  const total = r.total || (r.buy + r.hold + r.sell);
+  if (!total) return null;
+
+  const buyPct  = Math.round((r.buy  / total) * 100);
+  const holdPct = Math.round((r.hold / total) * 100);
+  const sellPct = Math.max(0, 100 - buyPct - holdPct);
+
+  const radius = 40;
+  const circ = 2 * Math.PI * radius;
+  const dashOffset = circ * (1 - buyPct / 100);
+
+  const bars = [
+    { label: 'Buy',  count: r.buy,  pct: buyPct,  color: '#10B981' },
+    { label: 'Hold', count: r.hold, pct: holdPct, color: '#F59E0B' },
+    { label: 'Sell', count: r.sell, pct: sellPct, color: '#EF4444' },
+  ];
+
+  return (
+    <div className="rounded-xl border border-[#1e1e3a] p-5 mb-6" style={{ background: 'rgba(13,13,26,0.7)' }}>
+      <p className="text-xs text-gray-500 uppercase tracking-wider mb-4">Analyst Ratings</p>
+      <div className="flex gap-6 items-center">
+        {/* Buy % circle */}
+        <div className="relative flex-shrink-0 w-24 h-24 flex items-center justify-center">
+          <svg width="96" height="96" viewBox="0 0 96 96" className="absolute inset-0" style={{ transform: 'rotate(-90deg)' }}>
+            <circle cx="48" cy="48" r={radius} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="8" />
+            <circle
+              cx="48" cy="48" r={radius} fill="none"
+              stroke="#10B981" strokeWidth="8"
+              strokeDasharray={circ}
+              strokeDashoffset={dashOffset}
+              strokeLinecap="round"
+            />
+          </svg>
+          <div className="relative z-10 text-center">
+            <p className="text-xl font-bold text-white">{buyPct}%</p>
+            <p className="text-[10px] text-gray-500">Buy</p>
+          </div>
+        </div>
+
+        {/* Buy/Hold/Sell bars */}
+        <div className="flex-1 space-y-3">
+          {bars.map(({ label, count, pct, color }) => (
+            <div key={label} className="flex items-center gap-3">
+              <span className="text-xs text-gray-500 w-8 flex-shrink-0">{label}</span>
+              <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ background: color }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 }}
+                />
+              </div>
+              <span className="text-xs text-gray-400 tabular-nums w-8 text-right flex-shrink-0">{pct}%</span>
+              <span className="text-xs text-gray-600 tabular-nums w-5 text-right flex-shrink-0">{count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {r.mean != null && (
+        <p className="text-xs text-gray-600 mt-3">
+          Consensus: <span className="text-gray-400 capitalize">{r.key || 'N/A'}</span>
+          {r.total ? ` · ${r.total} analysts` : ''}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ── Key metric chips ───────────────────────────────────────────────────────────
 
 function KeyMetric({ label, value, sub }: { label: string; value: string; sub?: string }) {
@@ -381,11 +560,15 @@ export default function StockDetail({
 
           {/* ── Main content ────────────────────────────────────── */}
           <div className="flex-1 min-w-0">
-            {/* Company name + key metric chips */}
+            {/* Company name */}
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-white mb-1">{company.name}</h2>
               <p className="text-sm text-gray-500 mb-5">{company.ticker} &middot; NASDAQ</p>
 
+              {/* About */}
+              <AboutSection summary={data?.summary} loading={loading} />
+
+              {/* Key metric chips */}
               {loading ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {Array.from({ length: 6 }).map((_, i) => <MetricSkeleton key={i} />)}
@@ -406,6 +589,10 @@ export default function StockDetail({
                 </div>
               ) : null}
             </div>
+
+            {/* Key stats + analyst ratings (below metrics grid, above charts) */}
+            <KeyStatsSection data={data} loading={loading} />
+            <AnalystRatingsSection data={data} loading={loading} />
 
             {/* ── Charts ─────────────────────────────────────────── */}
             <StockCharts ticker={company.ticker} />
