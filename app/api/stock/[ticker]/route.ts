@@ -36,12 +36,13 @@ export async function GET(
     const profile = result.assetProfile     as Record<string, unknown> | undefined;
 
     const rowYear = (s: any) => s.date ? new Date(s.date).getFullYear() : null;
-    // Take most-recent 4 years (rows come oldest-first)
-    const tail4 = <T,>(arr: T[]) => arr.slice(-4);
+    // Filter rows with actual data, then take most-recent 4 (rows come oldest-first)
+    const recent4 = (arr: any[], hasData: (s: any) => boolean) =>
+      arr.filter(hasData).slice(-4);
 
     // Income statements from fundamentalsTimeSeries
     const finRows: any[] = Array.isArray(finSeries) ? finSeries : [];
-    const incomeStatements = tail4(finRows).map((s: any) => ({
+    const incomeStatements = recent4(finRows, s => s.totalRevenue != null).map((s: any) => ({
       year:            rowYear(s),
       revenue:         safe(s.totalRevenue),
       grossProfit:     safe(s.grossProfit),
@@ -52,7 +53,7 @@ export async function GET(
 
     // Balance sheets from fundamentalsTimeSeries
     const balRows: any[] = Array.isArray(balSeries) ? balSeries : [];
-    const balanceSheets = tail4(balRows).map((s: any) => {
+    const balanceSheets = recent4(balRows, s => s.totalAssets != null).map((s: any) => {
       const assets  = safe(s.totalAssets);
       const equity  = safe(s.stockholdersEquity ?? s.commonStockEquity);
       const liab    = safe(s.totalLiabilitiesNetMinorityInterest)
@@ -69,7 +70,7 @@ export async function GET(
 
     // Cash flows from fundamentalsTimeSeries
     const cfRows: any[] = Array.isArray(cfSeries) ? cfSeries : [];
-    const cashFlows = tail4(cfRows).map((s: any) => {
+    const cashFlows = recent4(cfRows, s => s.cashFlowFromContinuingOperatingActivities != null || s.operatingCashFlow != null).map((s: any) => {
       const ocf   = safe(s.cashFlowFromContinuingOperatingActivities ?? s.operatingCashFlow);
       const capex = safe(s.capitalExpenditure);
       const fcf   = safe(s.freeCashFlow) ?? (ocf != null && capex != null ? ocf + capex : null);
