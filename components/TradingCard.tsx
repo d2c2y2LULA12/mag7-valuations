@@ -32,25 +32,13 @@ function GooglLogo({ size }: { size: number }) {
   );
 }
 
-function AmznLogo({ size }: { size: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 110" fill="none">
-      {/* 'a' letterform: filled bowl + stem with counter hole */}
-      <path
-        fill="#FFFFFF"
-        fillRule="evenodd"
-        d="M 64 20 A 30 30 0 1 0 64 68 L 64 76 L 72 76 L 72 20 Z M 58 44 A 14 14 0 0 1 44 58 A 14 14 0 0 1 30 44 A 14 14 0 0 1 44 30 A 14 14 0 0 1 58 44 Z"
-      />
-      <path d="M10 86 Q50 106 88 86" stroke="#FF9900" strokeWidth="7" strokeLinecap="round" fill="none"/>
-      <path d="M80 80 L88 86 L80 92" stroke="#FF9900" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-    </svg>
-  );
-}
-
 export function CompanyLogo({ company, size }: { company: Company; size: number }) {
   if (company.ticker === 'MSFT') return <MsftLogo size={size} />;
   if (company.ticker === 'GOOGL') return <GooglLogo size={size} />;
-  if (company.ticker === 'AMZN') return <AmznLogo size={size} />;
+  if (company.ticker === 'AMZN') return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/Amazon_icon.svg.png" alt="Amazon" width={size} height={size} style={{ objectFit: 'contain' }} />
+  );
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -168,11 +156,31 @@ export function HoloCardWrapper({
   const wiggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [wiggling, setWiggling] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
 
   useEffect(() => {
     return () => {
       if (wiggleTimerRef.current) clearTimeout(wiggleTimerRef.current);
     };
+  }, []);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        setWiggling(false);
+        setIsHovered(false);
+        const w = wrapperRef.current;
+        if (w) {
+          w.style.setProperty('--rotate-x', '0deg');
+          w.style.setProperty('--rotate-y', '0deg');
+          w.style.setProperty('--holo-x', '50%');
+          w.style.setProperty('--holo-y', '50%');
+        }
+        setResetKey(k => k + 1);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -217,6 +225,7 @@ export function HoloCardWrapper({
     >
       {/* whileTap intentionally omitted — it intercepts pointer events and can freeze after browser tab sleeps */}
       <motion.div
+        key={resetKey}
         className="card-holo-inner w-full h-full"
         animate={
           wiggling

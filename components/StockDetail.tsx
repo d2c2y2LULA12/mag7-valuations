@@ -56,37 +56,37 @@ function buildStats(data: StockData): StatBarConfig[] {
       label: 'Revenue Growth',
       display: data.revenueGrowth !== null ? `${(data.revenueGrowth * 100).toFixed(1)}%` : 'N/A',
       percent: pct(data.revenueGrowth, 0.5),
-      isGood: (data.revenueGrowth ?? 0) >= 0.12,
+      isGood: (data.revenueGrowth ?? 0) >= 0.10,
     },
     {
       label: 'Profit Margin',
       display: data.profitMargin !== null ? `${(data.profitMargin * 100).toFixed(1)}%` : 'N/A',
       percent: pct(data.profitMargin, 0.5),
-      isGood: (data.profitMargin ?? 0) >= 0.18,
+      isGood: (data.profitMargin ?? 0) >= 0.15,
     },
     {
       label: 'Return on Equity',
       display: data.returnOnEquity !== null ? `${(data.returnOnEquity * 100).toFixed(1)}%` : 'N/A',
       percent: clamp(((data.returnOnEquity ?? 0) / 2.5) * 100, 0, 100),
-      isGood: (data.returnOnEquity ?? 0) >= 0.5,
+      isGood: (data.returnOnEquity ?? 0) >= 0.15,
     },
     {
       label: 'EPS (TTM)',
       display: data.eps !== null ? `$${data.eps.toFixed(2)}` : 'N/A',
       percent: pct(data.eps, 30),
-      isGood: (data.eps ?? 0) >= 8,
+      isGood: (data.eps ?? 0) >= 5,
     },
     {
       label: 'Debt / Equity',
       display: data.debtToEquity !== null ? `${data.debtToEquity.toFixed(1)}` : 'N/A',
-      percent: data.debtToEquity === null ? 0 : clamp(100 - (data.debtToEquity / 300) * 100, 0, 100),
-      isGood: (data.debtToEquity ?? 999) < 100,
+      percent: data.debtToEquity === null ? 0 : clamp(100 - (data.debtToEquity / 400) * 100, 0, 100),
+      isGood: (data.debtToEquity ?? 999) < 200,
     },
     {
       label: 'Free Cash Flow',
       display: formatBig(data.freeCashFlow),
       percent: pct(data.freeCashFlow, 120e9),
-      isGood: (data.freeCashFlow ?? 0) >= 20e9,
+      isGood: (data.freeCashFlow ?? 0) >= 5e9,
     },
   ];
 }
@@ -134,7 +134,7 @@ function OverviewTab({ data, loading }: { data: StockData | null; loading: boole
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <p className="text-xs text-gray-600 mb-4">
-        Bar represents strength vs. Mag 7 peers. Green = above benchmark, red = below.
+        Bar represents strength vs. Large-Cap / Blue Chip Benchmarks. Green = above benchmark, red = below.
       </p>
       <div className="rounded-xl border border-[#1e1e3a] px-5 py-1" style={{ background: 'rgba(13,13,26,0.7)' }}>
         {stats.map((s) => <FIFAStatBar key={s.label} stat={s} />)}
@@ -370,6 +370,10 @@ function KeyStatsSection({ data, loading }: { data: StockData | null; loading: b
 
 // ── Analyst ratings ────────────────────────────────────────────────────────────
 
+function formatConsensus(key: string): string {
+  return key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
+
 function AnalystRatingsSection({ data, loading }: { data: StockData | null; loading: boolean }) {
   if (loading) {
     return (
@@ -450,7 +454,7 @@ function AnalystRatingsSection({ data, loading }: { data: StockData | null; load
       </div>
       {r.mean != null && (
         <p className="text-xs text-gray-600 mt-3">
-          Consensus: <span className="text-gray-400 capitalize">{r.key || 'N/A'}</span>
+          Consensus: <span className="text-gray-400">{r.key ? formatConsensus(r.key) : 'N/A'}</span>
           {r.total ? ` · ${r.total} analysts` : ''}
         </p>
       )}

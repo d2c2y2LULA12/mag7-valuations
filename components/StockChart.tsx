@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface DataPoint {
   date: string;
@@ -92,6 +92,7 @@ function ChartCard({
   title,
   subtitle,
   values,
+  dates,
   color,
   gradientId,
   ticker,
@@ -104,6 +105,7 @@ function ChartCard({
   title: string;
   subtitle?: string;
   values: number[];
+  dates: string[];
   color: string;
   gradientId: string;
   ticker: string;
@@ -113,10 +115,26 @@ function ChartCard({
   fmtValue: (v: number) => string;
   suffix?: string;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+
+  // Reset crosshair when data changes (range switch)
+  useEffect(() => { setHoverIdx(null); }, [values]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current || values.length < 2) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    setHoverIdx(Math.round(x * (values.length - 1)));
+  }, [values.length]);
+
+  const handleMouseLeave = useCallback(() => setHoverIdx(null), []);
+
   if (values.length < 2) return null;
 
   const min = Math.min(...values);
   const max = Math.max(...values);
+  const valueRange = max - min || 1;
   const latest = values[values.length - 1];
   const first = values[0];
   const change = ((latest - first) / first) * 100;
@@ -124,6 +142,17 @@ function ChartCard({
   const changeLabel = suffix === 'x'
     ? `${positive ? '+' : ''}${(latest - first).toFixed(1)}x`
     : `${positive ? '+' : ''}${change.toFixed(1)}%`;
+
+  const isHovering = hoverIdx !== null;
+  const displayValue = isHovering ? values[hoverIdx!] : latest;
+  const displayDate = isHovering && dates[hoverIdx!] ? formatDateLabel(dates[hoverIdx!], range) : null;
+
+  const hoverX = hoverIdx !== null
+    ? PAD.l + (hoverIdx / (values.length - 1)) * CW
+    : null;
+  const hoverY = hoverIdx !== null
+    ? PAD.t + (1 - (values[hoverIdx] - min) / valueRange) * CH
+    : null;
 
   return (
     <div
@@ -137,18 +166,53 @@ function ChartCard({
           {subtitle && <p className="text-[11px] text-gray-600 mt-0.5">{subtitle}</p>}
         </div>
         <div className="text-right">
-          <p className="text-base font-bold text-white tabular-nums">{fmtValue(latest)}{suffix}</p>
+          <p className="text-base font-bold text-white tabular-nums">
+            {fmtValue(displayValue)}{suffix}
+          </p>
           <p
             className="text-xs font-semibold tabular-nums"
-            style={{ color: positive ? '#10B981' : '#EF4444' }}
+            style={{ color: isHovering ? '#9CA3AF' : (positive ? '#10B981' : '#EF4444') }}
           >
-            {changeLabel}
+            {displayDate ?? changeLabel}
           </p>
         </div>
       </div>
 
-      {/* Chart */}
-      <LineChart values={values} color={color} gradientId={gradientId} />
+      {/* Chart with crosshair overlay */}
+      <div
+        ref={containerRef}
+        className="relative select-none"
+        style={{ height: VH, cursor: 'crosshair' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
+        <LineChart values={values} color={color} gradientId={gradientId} />
+        {hoverX !== null && hoverY !== null && (
+          <svg
+            className="absolute inset-0 pointer-events-none"
+            width="100%"
+            height={VH}
+            viewBox={`0 0 ${VW} ${VH}`}
+            preserveAspectRatio="none"
+            style={{ display: 'block' }}
+          >
+            <line
+              x1={hoverX} y1={PAD.t}
+              x2={hoverX} y2={PAD.t + CH}
+              stroke="rgba(255,255,255,0.3)"
+              strokeWidth="1.5"
+              strokeDasharray="3 3"
+            />
+            <circle
+              cx={hoverX} cy={hoverY}
+              r="5"
+              fill={color}
+              stroke="#0a0a0a"
+              strokeWidth="2"
+            />
+          </svg>
+        )}
+      </div>
 
       {/* Date range + stats row */}
       <div className="flex items-center justify-between mt-2">
@@ -185,8 +249,10 @@ export default function StockCharts({ ticker }: { ticker: string }) {
   }, [ticker, range]);
 
   const prices = chartData?.data.map((d) => d.price) ?? [];
+  const priceDates = chartData?.data.map((d) => d.date) ?? [];
   const peData = chartData?.data.filter((d) => d.pe != null) ?? [];
   const pes = peData.map((d) => d.pe as number);
+  const peDates = peData.map((d) => d.date);
 
   const startDate = chartData?.data[0]?.date ?? '';
   const endDate = chartData?.data[chartData.data.length - 1]?.date ?? '';
@@ -225,6 +291,7 @@ export default function StockCharts({ ticker }: { ticker: string }) {
           <ChartCard
             title="Stock Price"
             values={prices}
+            dates={priceDates}
             color="#10B981"
             gradientId={`price-${ticker}-${range}`}
             ticker={ticker}
@@ -238,6 +305,7 @@ export default function StockCharts({ ticker }: { ticker: string }) {
               title="Est. P/E Ratio"
               subtitle="Price ÷ current TTM EPS"
               values={pes}
+              dates={peDates}
               color="#4FD1E8"
               gradientId={`pe-${ticker}-${range}`}
               ticker={ticker}

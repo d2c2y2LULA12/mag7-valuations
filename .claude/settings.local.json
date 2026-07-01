@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:8000/api/stock/AAPL)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('price:', d.get\\('price'\\), 'forwardPE:', d.get\\('forwardPE'\\), 'marketCap:', d.get\\('marketCap'\\), 'revenueGrowth:', d.get\\('revenueGrowth'\\), 'profitMargin:', d.get\\('profitMargin'\\), 'income rows:', len\\(d.get\\('incomeStatements',[]\\)\\)\\)\")",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:3000/api/stock/MSFT)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('MSFT price:', d.get\\('price'\\), 'forwardPE:', d.get\\('forwardPE'\\)\\)\")"
+    ]
+  }
+}
