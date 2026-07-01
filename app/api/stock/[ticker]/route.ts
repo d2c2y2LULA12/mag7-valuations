@@ -20,19 +20,14 @@ export async function GET(
   }
 
   try {
-    const result: any = await yf.quoteSummary(ticker, {
-      modules: [
-        'price',
-        'summaryDetail',
-        'financialData',
-        'defaultKeyStatistics',
-        'incomeStatementHistory',
-        'balanceSheetHistory',
-        'cashflowStatementHistory',
-        'recommendationTrend',
-        'assetProfile',
-      ],
-    }, { validateResult: false });
+    const [result, finSeries, balSeries, cfSeries]: [any, any, any, any] = await Promise.all([
+      yf.quoteSummary(ticker, {
+        modules: ['price', 'summaryDetail', 'financialData', 'defaultKeyStatistics', 'recommendationTrend', 'assetProfile'],
+      }, { validateResult: false }),
+      yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2021-01-01', module: 'financials' } as any, { validateResult: false }),
+      yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2021-01-01', module: 'balance-sheet' } as any, { validateResult: false }),
+      yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2021-01-01', module: 'cash-flow' } as any, { validateResult: false }),
+    ]);
 
     const price   = result.price            as Record<string, unknown> | undefined;
     const fin     = result.financialData    as Record<string, unknown> | undefined;
@@ -40,38 +35,37 @@ export async function GET(
     const detail  = result.summaryDetail    as Record<string, unknown> | undefined;
     const profile = result.assetProfile     as Record<string, unknown> | undefined;
 
-    // Income statements (up to 4 years)
-    const incomeRows = (result.incomeStatementHistory as any)
-      ?.incomeStatementHistory ?? [];
-    const incomeStatements = incomeRows.slice(0, 4).map((s: any) => ({
-      year: new Date(s.endDate).getFullYear(),
+    const rowYear = (s: any) => s.date ? new Date(s.date).getFullYear() : null;
+
+    // Income statements from fundamentalsTimeSeries
+    const finRows: any[] = Array.isArray(finSeries) ? finSeries : [];
+    const incomeStatements = finRows.slice(0, 4).map((s: any) => ({
+      year:            rowYear(s),
       revenue:         safe(s.totalRevenue),
       grossProfit:     safe(s.grossProfit),
-      operatingIncome: safe(s.ebit ?? s.operatingIncome),
+      operatingIncome: safe(s.operatingIncome ?? s.EBIT),
       netIncome:       safe(s.netIncome),
-      eps:             safe(s.dilutedEps ?? s.basicEps),
+      eps:             safe(s.dilutedEPS),
     }));
 
-    // Balance sheets
-    const balanceRows = (result.balanceSheetHistory as any)
-      ?.balanceSheetStatements ?? [];
-    const balanceSheets = balanceRows.slice(0, 4).map((s: any) => ({
-      year:             new Date(s.endDate).getFullYear(),
+    // Balance sheets from fundamentalsTimeSeries
+    const balRows: any[] = Array.isArray(balSeries) ? balSeries : [];
+    const balanceSheets = balRows.slice(0, 4).map((s: any) => ({
+      year:             rowYear(s),
       totalAssets:      safe(s.totalAssets),
-      totalLiabilities: safe(s.totalLiab ?? s.totalLiabilities),
-      totalEquity:      safe(s.totalStockholderEquity ?? s.commonStockEquity),
-      cash:             safe(s.cash ?? s.cashAndCashEquivalents),
+      totalLiabilities: safe(s.totalLiabilitiesNetMinorityInterest),
+      totalEquity:      safe(s.stockholdersEquity),
+      cash:             safe(s.cashAndCashEquivalents),
       longTermDebt:     safe(s.longTermDebt),
     }));
 
-    // Cash flows
-    const cashRows = (result.cashflowStatementHistory as any)
-      ?.cashflowStatements ?? [];
-    const cashFlows = cashRows.slice(0, 4).map((s: any) => {
-      const ocf   = safe(s.totalCashFromOperatingActivities ?? s.operatingCashFlow);
-      const capex = safe(s.capitalExpenditures);
+    // Cash flows from fundamentalsTimeSeries
+    const cfRows: any[] = Array.isArray(cfSeries) ? cfSeries : [];
+    const cashFlows = cfRows.slice(0, 4).map((s: any) => {
+      const ocf   = safe(s.cashFlowFromContinuingOperatingActivities ?? s.operatingCashFlow);
+      const capex = safe(s.capitalExpenditure);
       const fcf   = safe(s.freeCashFlow) ?? (ocf != null && capex != null ? ocf + capex : null);
-      return { year: new Date(s.endDate).getFullYear(), operatingCashFlow: ocf, capex, freeCashFlow: fcf };
+      return { year: rowYear(s), operatingCashFlow: ocf, capex, freeCashFlow: fcf };
     });
 
     // Analyst ratings
@@ -108,8 +102,8 @@ export async function GET(
       volume:          safe(price?.regularMarketVolume),
       averageVolume:   safe(detail?.averageVolume),
       analystRatings: {
-        mean:  safe(detail?.trailingAnnualDividendYield ?? null),
-        key:   (detail as any)?.recommendationKey ?? '',
+        mean:  safe((fin as any)?.recommendationMean ?? null),
+        key:   (fin as any)?.recommendationKey ?? '',
         total: buy + hold + sell || null,
         buy, hold, sell,
       },
