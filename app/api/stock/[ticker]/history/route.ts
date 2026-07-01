@@ -50,7 +50,7 @@ export async function GET(
   const p2  = toDateStr(new Date());
 
   try {
-    const [chartResult, quote] = await Promise.all([
+    const [chartResult, quote]: [any, any] = await Promise.all([
       yf.chart(ticker, {
         period1:  p1,
         period2:  p2,
@@ -61,7 +61,7 @@ export async function GET(
       }, { validateResult: false }),
     ]);
 
-    const eps = safe((quote.defaultKeyStatistics as any)?.trailingEps);
+    const eps = safe(((quote as any).defaultKeyStatistics as any)?.trailingEps);
     const quotes = (chartResult as any)?.quotes ?? [];
 
     const data = quotes

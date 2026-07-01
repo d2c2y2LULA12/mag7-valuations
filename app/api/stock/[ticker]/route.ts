@@ -20,7 +20,7 @@ export async function GET(
   }
 
   try {
-    const result = await yf.quoteSummary(ticker, {
+    const result: any = await yf.quoteSummary(ticker, {
       modules: [
         'price',
         'summaryDetail',
