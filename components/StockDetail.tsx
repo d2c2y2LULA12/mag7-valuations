@@ -387,7 +387,9 @@ function AnalystRatingsSection({ data, loading }: { data: StockData | null; load
 
   const r = data?.analystRatings;
   if (!r) return null;
-  const total = r.total || (r.buy + r.hold + r.sell);
+  // Always use actual counts as denominator so percentages can't exceed 100%
+  const actual = r.buy + r.hold + r.sell;
+  const total = actual > 0 ? actual : (r.total ?? 0);
   if (!total) return null;
 
   const buyPct  = Math.round((r.buy  / total) * 100);

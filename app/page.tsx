@@ -65,10 +65,10 @@ function CardGrid({
 
   return (
     <>
-      {/* Desktop: single row, horizontally scrollable if needed */}
-      <div className="hidden md:flex gap-5 justify-center overflow-x-auto pb-2"
+      {/* Desktop: single row, fits 7 cards on 1440px screen */}
+      <div className="hidden md:flex gap-4 justify-center overflow-x-auto pb-2"
         style={{ minWidth: 0 }}>
-        <div className="flex gap-5" style={{ minWidth: COMPANIES.length * (CARD_W + 20) }}>
+        <div className="flex gap-4" style={{ minWidth: COMPANIES.length * CARD_W + (COMPANIES.length - 1) * 16 }}>
           {companies.map((c) => <TradingCard key={c.ticker} {...cardProps(c)} />)}
         </div>
       </div>

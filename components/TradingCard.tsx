@@ -1,12 +1,12 @@
 'use client';
 
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Company, StockData, ValuationSignal } from '@/lib/types';
 import { getValuationSignal, formatBig, formatPercent, formatPrice } from '@/lib/constants';
 
-export const CARD_W = 220;
-export const CARD_H = 300;
+export const CARD_W = 186;
+export const CARD_H = 254;
 
 // ── Inline SVG logos ──────────────────────────────────────────────────────────
 
@@ -35,8 +35,12 @@ function GooglLogo({ size }: { size: number }) {
 function AmznLogo({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 110" fill="none">
-      <circle cx="46" cy="44" r="26" stroke="#000000" strokeWidth="11" fill="none"/>
-      <line x1="72" y1="19" x2="72" y2="68" stroke="#000000" strokeWidth="11" strokeLinecap="round"/>
+      {/* 'a' letterform: filled bowl + stem with counter hole */}
+      <path
+        fill="#FFFFFF"
+        fillRule="evenodd"
+        d="M 64 20 A 30 30 0 1 0 64 68 L 64 76 L 72 76 L 72 20 Z M 58 44 A 14 14 0 0 1 44 58 A 14 14 0 0 1 30 44 A 14 14 0 0 1 44 30 A 14 14 0 0 1 58 44 Z"
+      />
       <path d="M10 86 Q50 106 88 86" stroke="#FF9900" strokeWidth="7" strokeLinecap="round" fill="none"/>
       <path d="M80 80 L88 86 L80 92" stroke="#FF9900" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
     </svg>
@@ -161,8 +165,15 @@ export function HoloCardWrapper({
   onClick?: () => void;
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const wiggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [wiggling, setWiggling] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (wiggleTimerRef.current) clearTimeout(wiggleTimerRef.current);
+    };
+  }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const wrapper = wrapperRef.current;
@@ -179,8 +190,9 @@ export function HoloCardWrapper({
 
   const handleMouseEnter = useCallback(() => {
     setIsHovered(true);
+    if (wiggleTimerRef.current) clearTimeout(wiggleTimerRef.current);
     setWiggling(true);
-    setTimeout(() => setWiggling(false), 500);
+    wiggleTimerRef.current = setTimeout(() => setWiggling(false), 500);
   }, []);
 
   const handleMouseLeave = useCallback(() => {
@@ -203,6 +215,7 @@ export function HoloCardWrapper({
       onMouseLeave={handleMouseLeave}
       onClick={onClick}
     >
+      {/* whileTap intentionally omitted — it intercepts pointer events and can freeze after browser tab sleeps */}
       <motion.div
         className="card-holo-inner w-full h-full"
         animate={
@@ -210,7 +223,6 @@ export function HoloCardWrapper({
             ? { rotate: [0, -3, 3, -2, 2, -1, 1, 0], transition: { duration: 0.45, ease: 'easeInOut' } }
             : { rotate: 0 }
         }
-        whileTap={onClick ? { scale: 0.96 } : undefined}
       >
         {children}
         <div className="card-foil" />
