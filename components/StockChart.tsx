@@ -117,18 +117,24 @@ function ChartCard({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 
-  // Reset crosshair when data changes (range switch)
-  useEffect(() => { setHoverIdx(null); }, [values]);
+  useEffect(() => { setHoverIdx(null); setMousePos(null); }, [values]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current || values.length < 2) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    setHoverIdx(Math.round(x * (values.length - 1)));
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    const norm = Math.max(0, Math.min(1, px / rect.width));
+    setHoverIdx(Math.round(norm * (values.length - 1)));
+    setMousePos({ x: px, y: py });
   }, [values.length]);
 
-  const handleMouseLeave = useCallback(() => setHoverIdx(null), []);
+  const handleMouseLeave = useCallback(() => {
+    setHoverIdx(null);
+    setMousePos(null);
+  }, []);
 
   if (values.length < 2) return null;
 
@@ -143,10 +149,6 @@ function ChartCard({
     ? `${positive ? '+' : ''}${(latest - first).toFixed(1)}x`
     : `${positive ? '+' : ''}${change.toFixed(1)}%`;
 
-  const isHovering = hoverIdx !== null;
-  const displayValue = isHovering ? values[hoverIdx!] : latest;
-  const displayDate = isHovering && dates[hoverIdx!] ? formatDateLabel(dates[hoverIdx!], range) : null;
-
   const hoverX = hoverIdx !== null
     ? PAD.l + (hoverIdx / (values.length - 1)) * CW
     : null;
@@ -154,39 +156,43 @@ function ChartCard({
     ? PAD.t + (1 - (values[hoverIdx] - min) / valueRange) * CH
     : null;
 
+  // Flip tooltip left when cursor is in the right 35% of the chart
+  const cw = containerRef.current?.clientWidth ?? 400;
+  const tooltipOnLeft = mousePos !== null && mousePos.x > cw * 0.65;
+
   return (
     <div
       className="rounded-xl border border-[#1e1e3a] p-4"
       style={{ background: 'rgba(13,13,26,0.7)' }}
     >
-      {/* Header */}
+      {/* Header — always shows latest value + period change */}
       <div className="flex items-start justify-between mb-3">
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{title}</p>
           {subtitle && <p className="text-[11px] text-gray-600 mt-0.5">{subtitle}</p>}
         </div>
         <div className="text-right">
-          <p className="text-base font-bold text-white tabular-nums">
-            {fmtValue(displayValue)}{suffix}
-          </p>
+          <p className="text-base font-bold text-white tabular-nums">{fmtValue(latest)}{suffix}</p>
           <p
             className="text-xs font-semibold tabular-nums"
-            style={{ color: isHovering ? '#9CA3AF' : (positive ? '#10B981' : '#EF4444') }}
+            style={{ color: positive ? '#10B981' : '#EF4444' }}
           >
-            {displayDate ?? changeLabel}
+            {changeLabel}
           </p>
         </div>
       </div>
 
-      {/* Chart with crosshair overlay */}
+      {/* Chart with crosshair + floating tooltip */}
       <div
         ref={containerRef}
         className="relative select-none"
-        style={{ height: VH, cursor: 'crosshair' }}
+        style={{ height: VH, cursor: 'crosshair', overflow: 'visible' }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
         <LineChart values={values} color={color} gradientId={gradientId} />
+
+        {/* Crosshair overlay */}
         {hoverX !== null && hoverY !== null && (
           <svg
             className="absolute inset-0 pointer-events-none"
@@ -194,23 +200,45 @@ function ChartCard({
             height={VH}
             viewBox={`0 0 ${VW} ${VH}`}
             preserveAspectRatio="none"
-            style={{ display: 'block' }}
+            style={{ display: 'block', overflow: 'visible' }}
           >
             <line
               x1={hoverX} y1={PAD.t}
               x2={hoverX} y2={PAD.t + CH}
-              stroke="rgba(255,255,255,0.3)"
+              stroke="rgba(255,255,255,0.28)"
               strokeWidth="1.5"
               strokeDasharray="3 3"
             />
-            <circle
-              cx={hoverX} cy={hoverY}
-              r="5"
-              fill={color}
-              stroke="#0a0a0a"
-              strokeWidth="2"
-            />
+            <circle cx={hoverX} cy={hoverY} r="5" fill={color} stroke="#0a0a0a" strokeWidth="2" />
           </svg>
+        )}
+
+        {/* Floating tooltip */}
+        {mousePos !== null && hoverIdx !== null && (
+          <div
+            className="absolute pointer-events-none z-20"
+            style={{
+              top: Math.max(0, mousePos.y - 44),
+              ...(tooltipOnLeft
+                ? { right: cw - mousePos.x + 14 }
+                : { left: mousePos.x + 14 }),
+              background: 'rgba(8,10,22,0.93)',
+              border: '1px solid rgba(79,209,232,0.28)',
+              borderRadius: 8,
+              padding: '6px 10px',
+              backdropFilter: 'blur(8px)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <p style={{ color: '#4FD1E8', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>
+              {fmtValue(values[hoverIdx])}{suffix}
+            </p>
+            {dates[hoverIdx] && (
+              <p style={{ color: '#6B7280', fontSize: 11, marginTop: 1 }}>
+                {formatDateLabel(dates[hoverIdx], range)}
+              </p>
+            )}
+          </div>
         )}
       </div>
 
