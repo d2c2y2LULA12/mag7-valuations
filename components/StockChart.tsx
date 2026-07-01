@@ -268,7 +268,10 @@ export default function StockCharts({ ticker }: { ticker: string }) {
     fetch(`/api/stock/${ticker}/history?period=${RANGE_TO_API[range]}`)
       .then((r) => r.json())
       .then((d) => {
-        if (!cancelled) { setChartData(d); setLoading(false); }
+        if (!cancelled) {
+          if (d?.data) { setChartData(d); } else { setError(d?.error ?? 'No data'); }
+          setLoading(false);
+        }
       })
       .catch((e) => {
         if (!cancelled) { setError(String(e)); setLoading(false); }
@@ -276,14 +279,14 @@ export default function StockCharts({ ticker }: { ticker: string }) {
     return () => { cancelled = true; };
   }, [ticker, range]);
 
-  const prices = chartData?.data.map((d) => d.price) ?? [];
-  const priceDates = chartData?.data.map((d) => d.date) ?? [];
-  const peData = chartData?.data.filter((d) => d.pe != null) ?? [];
+  const prices = chartData?.data?.map((d) => d.price) ?? [];
+  const priceDates = chartData?.data?.map((d) => d.date) ?? [];
+  const peData = chartData?.data?.filter((d) => d.pe != null) ?? [];
   const pes = peData.map((d) => d.pe as number);
   const peDates = peData.map((d) => d.date);
 
-  const startDate = chartData?.data[0]?.date ?? '';
-  const endDate = chartData?.data[chartData.data.length - 1]?.date ?? '';
+  const startDate = chartData?.data?.[0]?.date ?? '';
+  const endDate = chartData?.data ? chartData.data[chartData.data.length - 1]?.date ?? '' : '';
 
   return (
     <div className="mb-6">
