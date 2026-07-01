@@ -24,9 +24,9 @@ export async function GET(
       yf.quoteSummary(ticker, {
         modules: ['price', 'summaryDetail', 'financialData', 'defaultKeyStatistics', 'recommendationTrend', 'assetProfile'],
       }, { validateResult: false }),
-      yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2021-01-01', module: 'financials' } as any, { validateResult: false }),
-      yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2021-01-01', module: 'balance-sheet' } as any, { validateResult: false }),
-      yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2021-01-01', module: 'cash-flow' } as any, { validateResult: false }),
+      yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2020-01-01', module: 'financials' } as any, { validateResult: false }),
+      yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2020-01-01', module: 'balance-sheet' } as any, { validateResult: false }),
+      yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2020-01-01', module: 'cash-flow' } as any, { validateResult: false }),
     ]);
 
     const price   = result.price            as Record<string, unknown> | undefined;
@@ -36,10 +36,12 @@ export async function GET(
     const profile = result.assetProfile     as Record<string, unknown> | undefined;
 
     const rowYear = (s: any) => s.date ? new Date(s.date).getFullYear() : null;
+    // Take most-recent 4 years (rows come oldest-first)
+    const tail4 = <T,>(arr: T[]) => arr.slice(-4);
 
     // Income statements from fundamentalsTimeSeries
     const finRows: any[] = Array.isArray(finSeries) ? finSeries : [];
-    const incomeStatements = finRows.slice(0, 4).map((s: any) => ({
+    const incomeStatements = tail4(finRows).map((s: any) => ({
       year:            rowYear(s),
       revenue:         safe(s.totalRevenue),
       grossProfit:     safe(s.grossProfit),
@@ -50,18 +52,24 @@ export async function GET(
 
     // Balance sheets from fundamentalsTimeSeries
     const balRows: any[] = Array.isArray(balSeries) ? balSeries : [];
-    const balanceSheets = balRows.slice(0, 4).map((s: any) => ({
-      year:             rowYear(s),
-      totalAssets:      safe(s.totalAssets),
-      totalLiabilities: safe(s.totalLiabilitiesNetMinorityInterest),
-      totalEquity:      safe(s.stockholdersEquity),
-      cash:             safe(s.cashAndCashEquivalents),
-      longTermDebt:     safe(s.longTermDebt),
-    }));
+    const balanceSheets = tail4(balRows).map((s: any) => {
+      const assets  = safe(s.totalAssets);
+      const equity  = safe(s.stockholdersEquity ?? s.commonStockEquity);
+      const liab    = safe(s.totalLiabilitiesNetMinorityInterest)
+                   ?? (assets != null && equity != null ? assets - equity : null);
+      return {
+        year:             rowYear(s),
+        totalAssets:      assets,
+        totalLiabilities: liab,
+        totalEquity:      equity,
+        cash:             safe(s.cashAndCashEquivalents ?? s.cashCashEquivalentsAndShortTermInvestments),
+        longTermDebt:     safe(s.longTermDebt ?? s.longTermDebtAndCapitalLeaseObligation),
+      };
+    });
 
     // Cash flows from fundamentalsTimeSeries
     const cfRows: any[] = Array.isArray(cfSeries) ? cfSeries : [];
-    const cashFlows = cfRows.slice(0, 4).map((s: any) => {
+    const cashFlows = tail4(cfRows).map((s: any) => {
       const ocf   = safe(s.cashFlowFromContinuingOperatingActivities ?? s.operatingCashFlow);
       const capex = safe(s.capitalExpenditure);
       const fcf   = safe(s.freeCashFlow) ?? (ocf != null && capex != null ? ocf + capex : null);
