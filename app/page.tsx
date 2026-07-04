@@ -56,9 +56,9 @@ function PackFace() {
           }
         }
         @keyframes packPrismSweep {
-          0% { transform: translateX(-92%) skewX(-18deg); opacity: 0.06; }
-          48% { opacity: 0.34; }
-          100% { transform: translateX(128%) skewX(-18deg); opacity: 0.08; }
+          0% { transform: translateX(-92%) skewX(-18deg); opacity: 0.18; }
+          48% { opacity: 0.62; }
+          100% { transform: translateX(128%) skewX(-18deg); opacity: 0.22; }
         }
         @keyframes packIridescentGlide {
           0%, 100% {
@@ -230,7 +230,8 @@ function PackFace() {
           background:
             'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), rgba(79,209,232,0.24), rgba(217,58,164,0.12), transparent)',
           mixBlendMode: 'screen',
-          animation: 'packPrismSweep 5.6s ease-in-out infinite',
+          animation: 'packPrismSweep 5.6s linear infinite',
+          zIndex: 2,
         }}
       />
 
@@ -526,7 +527,7 @@ function RolodexScene({
   onOpenSidebar: () => void;
 }) {
   return (
-    <div className="flex flex-col h-screen overflow-hidden" style={{ background: '#0a0a0a' }}>
+    <div className="flex flex-col h-dvh overflow-hidden" style={{ background: '#0a0a0a' }}>
       {/* Header */}
       <div className="flex-shrink-0 pt-6 px-6">
         <HamburgerButton onClick={onOpenSidebar} />
@@ -627,13 +628,13 @@ export default function Home() {
         onReopenPack={() => { setPhase('pack'); setSidebarOpen(false); }}
       />
 
-      <div className="relative" style={{ minHeight: '100vh', background: '#0a0a0a' }}>
+      <div className="relative h-screen overflow-hidden" style={{ background: '#0a0a0a' }}>
         <AnimatePresence>
           {phase === 'pack' && (
             <motion.div
               key="pack"
               className="absolute inset-0"
-              exit={{ opacity: 0, scale: 0.94 }}
+              exit={{ opacity: 0, scale: 0.94, pointerEvents: 'none' }}
               transition={{ duration: 0.35 }}
             >
               <PackScene onComplete={handleTearComplete} />
@@ -646,7 +647,7 @@ export default function Home() {
               className="absolute inset-0"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              exit={{ opacity: 0, pointerEvents: 'none' }}
               transition={{ duration: 0.3 }}
             >
               <RolodexScene
@@ -659,11 +660,10 @@ export default function Home() {
           {phase === 'detail' && selectedCompany && (
             <motion.div
               key={`detail-${selectedCompany.ticker}`}
-              className="absolute top-0 left-0 right-0"
-              style={{ minHeight: '100vh', overflowY: 'auto' }}
+              className="absolute inset-0 overflow-y-auto"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              exit={{ opacity: 0, pointerEvents: 'none' }}
               transition={{ duration: 0.25 }}
             >
               <StockDetail
@@ -677,11 +677,10 @@ export default function Home() {
           {phase === 'compare' && selectedCompany && compareTarget && (
             <motion.div
               key={`compare-${selectedCompany.ticker}-${compareTarget.ticker}`}
-              className="absolute top-0 left-0 right-0"
-              style={{ minHeight: '100vh', overflowY: 'auto' }}
+              className="absolute inset-0 overflow-y-auto"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              exit={{ opacity: 0, pointerEvents: 'none' }}
               transition={{ duration: 0.25 }}
             >
               <ComparePage
