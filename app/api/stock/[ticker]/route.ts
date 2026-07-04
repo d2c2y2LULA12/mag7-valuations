@@ -83,6 +83,17 @@ export async function GET(
     const hold  = trend?.hold ?? 0;
     const sell  = (trend?.sell ?? 0) + (trend?.strongSell ?? 0);
 
+    // Derive D/E from balance sheet (totalLiabilities / totalEquity) so it
+    // matches the Financials tab numbers. Yahoo's financialData.debtToEquity
+    // uses only long-term debt and is on a different scale.
+    const latestBal = balanceSheets[balanceSheets.length - 1] ?? null;
+    const derivedDebtToEquity =
+      latestBal?.totalLiabilities != null &&
+      latestBal?.totalEquity != null &&
+      latestBal.totalEquity !== 0
+        ? latestBal.totalLiabilities / latestBal.totalEquity
+        : null;
+
     return NextResponse.json({
       ticker,
       price:          safe(price?.regularMarketPrice),
@@ -99,7 +110,7 @@ export async function GET(
       grossMargin:    safe(fin?.grossMargins),
       revenueGrowth:  safe(fin?.revenueGrowth),
       returnOnEquity: safe(fin?.returnOnEquity),
-      debtToEquity:   safe(fin?.debtToEquity),
+      debtToEquity:   derivedDebtToEquity,
       freeCashFlow:   safe(fin?.freeCashflow),
       priceToSales:   safe(detail?.priceToSalesTrailing12Months),
       evToEbitda:     safe(stats?.enterpriseToEbitda),

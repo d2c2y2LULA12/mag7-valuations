@@ -4,11 +4,12 @@ import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CARD_W, CARD_H, CardFront, HoloCardWrapper } from '@/components/TradingCard';
 import StockDetail from '@/components/StockDetail';
+import ComparePage from '@/components/ComparePage';
 import Sidebar, { HamburgerButton } from '@/components/Sidebar';
 import { COMPANIES } from '@/lib/constants';
 import { Company } from '@/lib/types';
 
-type Phase = 'pack' | 'rolodex' | 'detail';
+type Phase = 'pack' | 'rolodex' | 'detail' | 'compare';
 
 // ── Pack ──────────────────────────────────────────────────────────────────────
 
@@ -579,6 +580,7 @@ function RolodexScene({
 export default function Home() {
   const [phase, setPhase] = useState<Phase>('pack');
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [compareTarget, setCompareTarget] = useState<Company | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleTearComplete = useCallback(() => setPhase('rolodex'), []);
@@ -591,6 +593,16 @@ export default function Home() {
   const handleBack = useCallback(() => {
     setPhase('rolodex');
     setSelectedCompany(null);
+  }, []);
+
+  const handleCompare = useCallback((target: Company) => {
+    setCompareTarget(target);
+    setPhase('compare');
+  }, []);
+
+  const handleBackFromCompare = useCallback(() => {
+    setPhase('detail');
+    // selectedCompany stays set — returns to the originating detail page
   }, []);
 
   const handleNavigateToCompany = useCallback((company: Company) => {
@@ -657,6 +669,25 @@ export default function Home() {
               <StockDetail
                 company={selectedCompany}
                 onBack={handleBack}
+                onOpenSidebar={() => setSidebarOpen(true)}
+                onCompare={handleCompare}
+              />
+            </motion.div>
+          )}
+          {phase === 'compare' && selectedCompany && compareTarget && (
+            <motion.div
+              key={`compare-${selectedCompany.ticker}-${compareTarget.ticker}`}
+              className="absolute top-0 left-0 right-0"
+              style={{ minHeight: '100vh', overflowY: 'auto' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <ComparePage
+                companyA={selectedCompany}
+                companyB={compareTarget}
+                onBack={handleBackFromCompare}
                 onOpenSidebar={() => setSidebarOpen(true)}
               />
             </motion.div>

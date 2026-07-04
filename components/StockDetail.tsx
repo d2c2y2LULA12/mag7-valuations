@@ -3,11 +3,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Company, StockData } from '@/lib/types';
-import { MiniCard, CARD_W } from './TradingCard';
+import { MiniCard, CARD_W, CARD_H, CardFront, HoloCardWrapper, CompanyLogo } from './TradingCard';
 import { HamburgerButton } from './Sidebar';
 import FinancialTables from './FinancialTables';
 import StockCharts from './StockChart';
-import { formatBig, formatRatio, formatPrice, getValuationSignal } from '@/lib/constants';
+import { formatBig, formatRatio, formatPrice, getValuationSignal, COMPANIES } from '@/lib/constants';
 import InfoTip from './InfoTip';
 
 const TIPS: Record<string, string> = {
@@ -26,7 +26,7 @@ const TIPS: Record<string, string> = {
   'Price / Sales':    'Stock price relative to revenue. Useful when a company isn\'t profitable yet — it shows how much you\'re paying per dollar of sales.',
   'EV / EBITDA':      'Enterprise Value divided by earnings before interest, taxes, depreciation, and amortization. A way to compare companies regardless of how they\'re financed. Lower generally means cheaper.',
   'Analyst Ratings':  'Wall Street analysts who cover the stock publish Buy, Hold, or Sell recommendations. This shows the breakdown across all analysts currently covering it.',
-  'Valuation Signal': 'A quick read based on Forward P/E. Under 20x is CHEAP by Mag 7 standards, 20–30x is FAIR, above 30x is RICH. It\'s one signal, not the whole story.',
+  'Earnings Multiple Signal': 'A quick read based on Forward P/E only. Under 20x is CHEAP by Mag 7 standards, 20–30x is FAIR, above 30x is RICH. This reflects the earnings multiple — not an overall valuation verdict. Price/Sales and EV/EBITDA below may tell a different story.',
   'High Today':       'The highest price the stock traded at today during market hours.',
   'Low Today':        'The lowest price the stock traded at today during market hours.',
   '52W High':         'The highest price the stock has traded at in the last 52 weeks. Useful for seeing how far off the stock is from its recent peak.',
@@ -104,9 +104,9 @@ function buildStats(data: StockData): StatBarConfig[] {
     },
     {
       label: 'Debt / Equity',
-      display: data.debtToEquity !== null ? `${data.debtToEquity.toFixed(1)}` : 'N/A',
-      percent: data.debtToEquity === null ? 0 : clamp(100 - (data.debtToEquity / 400) * 100, 0, 100),
-      isGood: (data.debtToEquity ?? 999) < 200,
+      display: data.debtToEquity !== null ? `${data.debtToEquity.toFixed(2)}` : 'N/A',
+      percent: data.debtToEquity === null ? 0 : clamp(100 - (data.debtToEquity / 3) * 100, 0, 100),
+      isGood: (data.debtToEquity ?? 999) < 1.0,
     },
     {
       label: 'Free Cash Flow',
@@ -161,14 +161,14 @@ function OverviewTab({ data, loading }: { data: StockData | null; loading: boole
   }
   const stats = buildStats(data);
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+    <>
       <p className="text-xs text-gray-600 mb-4">
         Bar represents strength vs. Large-Cap / Blue Chip Benchmarks. Green = above benchmark, red = below.
       </p>
       <div className="rounded-xl border border-[#1e1e3a] px-5 py-1" style={{ background: 'rgba(13,13,26,0.7)' }}>
         {stats.map((s) => <FIFAStatBar key={s.label} stat={s} />)}
       </div>
-    </motion.div>
+    </>
   );
 }
 
@@ -194,11 +194,7 @@ function FinancialsTab({ data, loading }: { data: StockData | null; loading: boo
       </div>
     );
   }
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <FinancialTables data={data} />
-    </motion.div>
-  );
+  return <FinancialTables data={data} />;
 }
 
 // ── Valuation tab ──────────────────────────────────────────────────────────────
@@ -291,6 +287,8 @@ function ValuationTab({ data, loading }: { data: StockData | null; loading: bool
   const signal = getValuationSignal(data.forwardPE);
   const signalClass =
     signal === 'CHEAP' ? 'badge-cheap' : signal === 'FAIR' ? 'badge-fair' : signal === 'RICH' ? 'badge-rich' : 'badge-na';
+  const signalLabel =
+    signal === 'CHEAP' ? 'CHEAP ON EARNINGS' : signal === 'FAIR' ? 'FAIR ON EARNINGS' : signal === 'RICH' ? 'RICH ON EARNINGS' : 'N/A';
   const metrics: ValMetric[] = [
     { label: 'P/E Ratio (Trailing)', value: data.peRatio,      avg: MAG7_AVG.pe },
     { label: 'Forward P/E',          value: data.forwardPE,    avg: MAG7_AVG.forwardPe },
@@ -299,16 +297,16 @@ function ValuationTab({ data, loading }: { data: StockData | null; loading: bool
   ];
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+    <>
       <div className="rounded-xl border border-[#1e1e3a] p-5 mb-6 flex items-center justify-between" style={{ background: 'rgba(13,13,26,0.7)' }}>
         <div>
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center">
-            Valuation Signal
-            <InfoTip text={TIPS['Valuation Signal']} />
+            Earnings Multiple Signal
+            <InfoTip text={TIPS['Earnings Multiple Signal']} />
           </p>
-          <p className="text-xs text-gray-600">Based on Forward P/E vs. 20 / 30 thresholds</p>
+          <p className="text-xs text-gray-600">Forward P/E vs. 20 / 30 thresholds — earnings only</p>
         </div>
-        <span className={`text-xl font-black tracking-widest px-4 py-2 rounded-lg ${signalClass}`}>{signal}</span>
+        <span className={`text-base font-black tracking-widest px-4 py-2 rounded-lg ${signalClass}`}>{signalLabel}</span>
       </div>
       <div className="rounded-xl border border-[#1e1e3a] px-6 pt-5 pb-1" style={{ background: 'rgba(13,13,26,0.7)' }}>
         <p className="text-xs text-gray-600 mb-5">
@@ -316,7 +314,7 @@ function ValuationTab({ data, loading }: { data: StockData | null; loading: bool
         </p>
         {metrics.map((m) => <ValBar key={m.label} m={m} />)}
       </div>
-    </motion.div>
+    </>
   );
 }
 
@@ -518,21 +516,157 @@ function KeyMetric({ label, value, sub }: { label: string; value: string; sub?: 
   );
 }
 
+// ── Compare sub-components ────────────────────────────────────────────────────
+
+const FACE_BASE: React.CSSProperties = {
+  position: 'absolute', inset: 0, borderRadius: 12, overflow: 'hidden',
+  backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' as React.CSSProperties['WebkitBackfaceVisibility'],
+  background: 'rgba(13,13,26,0.95)', border: '1px solid rgba(79,209,232,0.18)',
+  cursor: 'pointer',
+};
+
+function CompareCard({ isFlipped, pick, onClick }: { isFlipped: boolean; pick: Company | null; onClick: () => void }) {
+  return (
+    <div style={{ perspective: '900px', width: CARD_W, height: CARD_H }} onClick={onClick}>
+      <motion.div
+        animate={{ rotateY: isFlipped ? 180 : 0 }}
+        transition={{ duration: 0.45, ease: 'easeInOut' }}
+        style={{ width: '100%', height: '100%', position: 'relative', transformStyle: 'preserve-3d' }}
+      >
+        {/* Front */}
+        <div style={FACE_BASE}>
+          <div className="flex flex-col items-center justify-center h-full gap-3 p-4">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(79,209,232,0.65)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            <p className="text-xs font-bold tracking-widest text-gray-300 uppercase">Compare</p>
+            <p className="text-[10px] text-gray-600 text-center leading-relaxed">Pick a stock to compare side by side</p>
+          </div>
+        </div>
+        {/* Back */}
+        <div style={{ ...FACE_BASE, transform: 'rotateY(180deg)', borderColor: pick ? `${pick.brandColor}55` : 'rgba(79,209,232,0.18)' }}>
+          <div className="flex flex-col items-center justify-center h-full gap-2 p-4">
+            {pick ? (
+              <>
+                <CompanyLogo company={pick} size={40} />
+                <p className="text-xs font-bold tracking-wider mt-1" style={{ color: pick.brandColor }}>{pick.ticker}</p>
+                <p className="text-[9px] text-gray-500">vs {pick.shortName}</p>
+                <p className="text-[9px] text-gray-700 mt-2">tap to cancel</p>
+              </>
+            ) : (
+              <>
+                <div className="w-8 h-8 rounded-full border border-[rgba(79,209,232,0.25)] flex items-center justify-center">
+                  <span style={{ color: '#4FD1E8' }} className="text-lg font-bold">?</span>
+                </div>
+                <p className="text-xs text-gray-400">Picking…</p>
+                <p className="text-[9px] text-gray-700 mt-2">tap to cancel</p>
+              </>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function PickerView({ company, onPick }: { company: Company; onPick: (c: Company) => void }) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
+      <h2 className="text-2xl font-bold text-white mb-1">Pick a card to compare</h2>
+      <p className="text-sm text-gray-500 mb-8">
+        Choose a stock to go head-to-head with{' '}
+        <span style={{ color: company.brandColor }}>{company.name}</span>
+      </p>
+      <div className="flex flex-wrap gap-4">
+        {COMPANIES.map((c) => {
+          const isSelf = c.ticker === company.ticker;
+          return (
+            <div key={c.ticker} className="flex flex-col items-center gap-2"
+              style={{ opacity: isSelf ? 0.25 : 1, pointerEvents: isSelf ? 'none' : 'auto' }}>
+              <HoloCardWrapper width={CARD_W} height={CARD_H} onClick={() => onPick(c)}>
+                <CardFront company={c} cardW={CARD_W} />
+              </HoloCardWrapper>
+              <p className="text-xs text-gray-500 font-medium">{c.ticker}</p>
+            </div>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
+function ConfirmView({
+  companyA, companyB, onConfirm, onChangePick,
+}: {
+  companyA: Company; companyB: Company;
+  onConfirm: () => void; onChangePick: () => void;
+}) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
+      <h2 className="text-2xl font-bold text-white mb-1">Ready to compare?</h2>
+      <p className="text-sm text-gray-500 mb-8">Confirm your matchup before diving in</p>
+      <div className="flex items-center gap-10 mb-10">
+        <div className="flex flex-col items-center gap-3">
+          <HoloCardWrapper width={CARD_W} height={CARD_H}>
+            <CardFront company={companyA} cardW={CARD_W} />
+          </HoloCardWrapper>
+          <p className="text-sm font-bold text-white">{companyA.name}</p>
+          <p className="text-xs text-gray-600">{companyA.ticker}</p>
+        </div>
+        <div className="flex-shrink-0">
+          <p className="text-3xl font-black text-gray-700 tracking-widest">VS</p>
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          <HoloCardWrapper width={CARD_W} height={CARD_H}>
+            <CardFront company={companyB} cardW={CARD_W} />
+          </HoloCardWrapper>
+          <p className="text-sm font-bold text-white">{companyB.name}</p>
+          <p className="text-xs text-gray-600">{companyB.ticker}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-5">
+        <button
+          onClick={onConfirm}
+          className="px-6 py-2.5 rounded-lg font-bold text-sm tracking-wider transition-opacity hover:opacity-90"
+          style={{ background: '#4FD1E8', color: '#000810' }}
+        >
+          Compare →
+        </button>
+        <button
+          onClick={onChangePick}
+          className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+        >
+          ← Pick different
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 // ── Main detail component ──────────────────────────────────────────────────────
 
 export default function StockDetail({
   company,
   onBack,
   onOpenSidebar,
+  onCompare,
 }: {
   company: Company;
   onBack: () => void;
   onOpenSidebar?: () => void;
+  onCompare?: (target: Company) => void;
 }) {
   const [data, setData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [compareStep, setCompareStep] = useState<'idle' | 'picking' | 'confirm'>('idle');
+  const [comparePick, setComparePick] = useState<Company | null>(null);
+
+  const cancelCompare = useCallback(() => { setCompareStep('idle'); setComparePick(null); }, []);
+  const handleBack = useCallback(() => {
+    if (compareStep !== 'idle') { cancelCompare(); } else { onBack(); }
+  }, [compareStep, cancelCompare, onBack]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -569,7 +703,7 @@ export default function StockDetail({
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           {onOpenSidebar && <HamburgerButton onClick={onOpenSidebar} className="flex-shrink-0" />}
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="flex items-center gap-2 text-sm text-gray-400 hover:text-[#4FD1E8] transition-colors flex-shrink-0"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -583,7 +717,7 @@ export default function StockDetail({
             {signal !== 'N/A' && (
               <span className={`text-xs px-2 py-0.5 rounded font-bold tracking-widest
                 ${signal === 'CHEAP' ? 'badge-cheap' : signal === 'FAIR' ? 'badge-fair' : 'badge-rich'}`}>
-                {signal}
+                {signal} P/E
               </span>
             )}
           </div>
@@ -604,12 +738,33 @@ export default function StockDetail({
             <div className="sticky top-20 flex flex-col gap-4 items-center">
               <MiniCard company={company} data={data} loading={loading} face="front" />
               <MiniCard company={company} data={data} loading={loading} face="back" />
+              <CompareCard
+                isFlipped={compareStep !== 'idle'}
+                pick={comparePick}
+                onClick={() => {
+                  if (compareStep !== 'idle') { cancelCompare(); }
+                  else { setCompareStep('picking'); }
+                }}
+              />
               <p className="text-xs text-gray-600 text-center mt-1">{company.shortName}</p>
             </div>
           </div>
 
           {/* ── Main content ────────────────────────────────────── */}
           <div className="flex-1 min-w-0">
+            {compareStep === 'picking' ? (
+              <PickerView
+                company={company}
+                onPick={(c) => { setComparePick(c); setCompareStep('confirm'); }}
+              />
+            ) : compareStep === 'confirm' ? (
+              <ConfirmView
+                companyA={company}
+                companyB={comparePick!}
+                onConfirm={() => onCompare?.(comparePick!)}
+                onChangePick={() => setCompareStep('picking')}
+              />
+            ) : (<>
             {/* Company name */}
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-white mb-1">{company.name}</h2>
@@ -670,24 +825,25 @@ export default function StockDetail({
 
             {/* Tab content — skeletons always show while loading */}
             {!error && (
-              <AnimatePresence mode="wait">
+              <AnimatePresence>
                 {activeTab === 'overview' && (
-                  <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+                  <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1 }}>
                     <OverviewTab data={data} loading={loading} />
                   </motion.div>
                 )}
                 {activeTab === 'financials' && (
-                  <motion.div key="financials" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+                  <motion.div key="financials" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1 }}>
                     <FinancialsTab data={data} loading={loading} />
                   </motion.div>
                 )}
                 {activeTab === 'valuation' && (
-                  <motion.div key="valuation" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+                  <motion.div key="valuation" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1 }}>
                     <ValuationTab data={data} loading={loading} />
                   </motion.div>
                 )}
               </AnimatePresence>
             )}
+            </>)}
           </div>
         </div>
       </div>
