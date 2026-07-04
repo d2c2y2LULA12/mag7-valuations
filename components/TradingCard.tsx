@@ -8,6 +8,20 @@ import { getValuationSignal, formatBig, formatPercent, formatPrice } from '@/lib
 export const CARD_W = 186;
 export const CARD_H = 254;
 
+// Shrinks side-by-side card pairs (Confirm/Compare headers) below the lg
+// breakpoint instead of stacking them, to keep those screens scannable
+// without a tall scroll.
+export function useNarrowCardSize() {
+  const [w, setW] = useState(CARD_W);
+  useEffect(() => {
+    const check = () => setW(window.innerWidth < 1024 ? 108 : CARD_W);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return { w, h: Math.round(w * (CARD_H / CARD_W)) };
+}
+
 // ── Inline SVG logos ──────────────────────────────────────────────────────────
 
 function MsftLogo({ size }: { size: number }) {

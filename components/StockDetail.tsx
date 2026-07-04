@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Company, StockData } from '@/lib/types';
-import { MiniCard, CARD_W, CARD_H, CardFront, HoloCardWrapper, CompanyLogo } from './TradingCard';
+import { MiniCard, CARD_W, CARD_H, CardFront, HoloCardWrapper, CompanyLogo, useNarrowCardSize } from './TradingCard';
 import { HamburgerButton } from './Sidebar';
 import FinancialTables from './FinancialTables';
 import StockCharts from './StockChart';
@@ -601,26 +601,27 @@ function ConfirmView({
   companyA: Company; companyB: Company;
   onConfirm: () => void; onChangePick: () => void;
 }) {
+  const { w, h } = useNarrowCardSize();
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
       <h2 className="text-2xl font-bold text-white mb-1">Ready to compare?</h2>
       <p className="text-sm text-gray-500 mb-8">Confirm your matchup before diving in</p>
-      <div className="flex flex-col items-center gap-6 mb-10 lg:flex-row lg:gap-10">
-        <div className="flex flex-col items-center gap-3">
-          <HoloCardWrapper width={CARD_W} height={CARD_H}>
-            <CardFront company={companyA} cardW={CARD_W} />
+      <div className="flex items-center justify-center gap-4 mb-10 sm:gap-10">
+        <div className="flex flex-col items-center gap-2">
+          <HoloCardWrapper width={w} height={h}>
+            <CardFront company={companyA} cardW={w} />
           </HoloCardWrapper>
-          <p className="text-sm font-bold text-white">{companyA.name}</p>
+          <p className="text-sm font-bold text-white text-center">{companyA.name}</p>
           <p className="text-xs text-gray-600">{companyA.ticker}</p>
         </div>
         <div className="flex-shrink-0">
           <p className="text-3xl font-black text-gray-700 tracking-widest">VS</p>
         </div>
-        <div className="flex flex-col items-center gap-3">
-          <HoloCardWrapper width={CARD_W} height={CARD_H}>
-            <CardFront company={companyB} cardW={CARD_W} />
+        <div className="flex flex-col items-center gap-2">
+          <HoloCardWrapper width={w} height={h}>
+            <CardFront company={companyB} cardW={w} />
           </HoloCardWrapper>
-          <p className="text-sm font-bold text-white">{companyB.name}</p>
+          <p className="text-sm font-bold text-white text-center">{companyB.name}</p>
           <p className="text-xs text-gray-600">{companyB.ticker}</p>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Company, StockData } from '@/lib/types';
 import { getValuationSignal, formatBig, formatPrice, formatRatio } from '@/lib/constants';
-import { CardFront, HoloCardWrapper, CARD_W, CARD_H } from './TradingCard';
+import { CardFront, HoloCardWrapper, useNarrowCardSize } from './TradingCard';
 import { HamburgerButton } from './Sidebar';
 
 type WinRule = 'lower' | 'higher' | 'none';
@@ -173,6 +173,7 @@ export default function ComparePage({
   const rows = buildRows(dataA, dataB);
   const winsA = rows.filter((r) => winSide(r.rawA, r.rawB, r.rule) === 'A').length;
   const winsB = rows.filter((r) => winSide(r.rawA, r.rawB, r.rule) === 'B').length;
+  const { w: cardW, h: cardH } = useNarrowCardSize();
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(180deg, #000000 0%, #0a0a0a 100%)' }}>
@@ -199,10 +200,10 @@ export default function ComparePage({
 
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Company card headers */}
-        <div className="flex flex-col items-center gap-6 mb-8 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-end">
-          <div className="flex flex-col items-center gap-3">
-            <HoloCardWrapper width={CARD_W} height={CARD_H}>
-              <CardFront company={companyA} cardW={CARD_W} />
+        <div className="flex items-end justify-center gap-3 mb-8 sm:gap-6">
+          <div className="flex flex-col items-center gap-2">
+            <HoloCardWrapper width={cardW} height={cardH}>
+              <CardFront company={companyA} cardW={cardW} />
             </HoloCardWrapper>
             <div className="text-center">
               <p className="text-sm font-bold text-white">{companyA.name}</p>
@@ -213,20 +214,20 @@ export default function ComparePage({
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-center pb-12 px-4 gap-3">
-            <p className="text-2xl font-black text-gray-700 tracking-widest">VS</p>
+          <div className="flex flex-col items-center justify-center pb-10 px-1 gap-3 sm:pb-12 sm:px-4">
+            <p className="text-xl font-black text-gray-700 tracking-widest sm:text-2xl">VS</p>
             {!loading && dataA && dataB && (
-              <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center text-center mt-2">
-                <p className="text-2xl font-black" style={{ color: companyA.brandColor }}>{winsA}</p>
-                <p className="text-[10px] text-gray-600 uppercase tracking-wider">wins</p>
-                <p className="text-2xl font-black" style={{ color: companyB.brandColor }}>{winsB}</p>
+              <div className="grid grid-cols-[1fr_auto_1fr] gap-1 items-center text-center mt-2 sm:gap-2">
+                <p className="text-lg font-black sm:text-2xl" style={{ color: companyA.brandColor }}>{winsA}</p>
+                <p className="text-[9px] text-gray-600 uppercase tracking-wider sm:text-[10px]">wins</p>
+                <p className="text-lg font-black sm:text-2xl" style={{ color: companyB.brandColor }}>{winsB}</p>
               </div>
             )}
           </div>
 
-          <div className="flex flex-col items-center gap-3">
-            <HoloCardWrapper width={CARD_W} height={CARD_H}>
-              <CardFront company={companyB} cardW={CARD_W} />
+          <div className="flex flex-col items-center gap-2">
+            <HoloCardWrapper width={cardW} height={cardH}>
+              <CardFront company={companyB} cardW={cardW} />
             </HoloCardWrapper>
             <div className="text-center">
               <p className="text-sm font-bold text-white">{companyB.name}</p>
