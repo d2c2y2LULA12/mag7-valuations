@@ -199,7 +199,7 @@ export default function ComparePage({
 
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Company card headers */}
-        <div className="grid grid-cols-[1fr_auto_1fr] gap-6 items-end mb-8">
+        <div className="flex flex-col items-center gap-6 mb-8 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-end">
           <div className="flex flex-col items-center gap-3">
             <HoloCardWrapper width={CARD_W} height={CARD_H}>
               <CardFront company={companyA} cardW={CARD_W} />

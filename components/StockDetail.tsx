@@ -577,11 +577,11 @@ function PickerView({ company, onPick }: { company: Company; onPick: (c: Company
         Choose a stock to go head-to-head with{' '}
         <span style={{ color: company.brandColor }}>{company.name}</span>
       </p>
-      <div className="flex flex-wrap gap-4">
+      <div className="flex gap-4 overflow-x-auto pb-2 lg:flex-wrap lg:overflow-visible">
         {COMPANIES.map((c) => {
           const isSelf = c.ticker === company.ticker;
           return (
-            <div key={c.ticker} className="flex flex-col items-center gap-2"
+            <div key={c.ticker} className="flex flex-col items-center gap-2 flex-shrink-0"
               style={{ opacity: isSelf ? 0.25 : 1, pointerEvents: isSelf ? 'none' : 'auto' }}>
               <HoloCardWrapper width={CARD_W} height={CARD_H} onClick={() => onPick(c)}>
                 <CardFront company={c} cardW={CARD_W} />
@@ -605,7 +605,7 @@ function ConfirmView({
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
       <h2 className="text-2xl font-bold text-white mb-1">Ready to compare?</h2>
       <p className="text-sm text-gray-500 mb-8">Confirm your matchup before diving in</p>
-      <div className="flex items-center gap-10 mb-10">
+      <div className="flex flex-col items-center gap-6 mb-10 lg:flex-row lg:gap-10">
         <div className="flex flex-col items-center gap-3">
           <HoloCardWrapper width={CARD_W} height={CARD_H}>
             <CardFront company={companyA} cardW={CARD_W} />
@@ -731,6 +731,29 @@ export default function StockDetail({
 
       {/* ── Body ──────────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+
+        {/* ── Mobile/tablet card row: same 3 cards, horizontal instead of stacked ─ */}
+        <div className="lg:hidden mb-6 -mx-4 px-4">
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {compareStep === 'idle' ? (
+              <>
+                <div className="flex-shrink-0"><MiniCard company={company} data={data} loading={loading} face="front" /></div>
+                <div className="flex-shrink-0"><MiniCard company={company} data={data} loading={loading} face="back" /></div>
+                <div className="flex-shrink-0">
+                  <CompareCard isFlipped={false} pick={null} onClick={() => setCompareStep('picking')} />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex-shrink-0"><MiniCard company={company} data={data} loading={loading} face="front" /></div>
+                <div className="flex-shrink-0">
+                  <CompareCard isFlipped={true} pick={comparePick} onClick={cancelCompare} />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
         <div className="flex gap-8">
 
           {/* ── Pinned left column: two full-size holographic cards ─ */}
