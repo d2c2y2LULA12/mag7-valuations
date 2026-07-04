@@ -56,9 +56,9 @@ function PackFace() {
           }
         }
         @keyframes packPrismSweep {
-          0% { transform: translateX(-92%) skewX(-18deg); opacity: 0.18; }
-          48% { opacity: 0.62; }
-          100% { transform: translateX(128%) skewX(-18deg); opacity: 0.22; }
+          0% { transform: translateX(-92%) skewX(-18deg); opacity: 0.3; }
+          48% { opacity: 1; }
+          100% { transform: translateX(128%) skewX(-18deg); opacity: 0.35; }
         }
         @keyframes packIridescentGlide {
           0%, 100% {
@@ -225,13 +225,12 @@ function PackFace() {
       />
 
       <div
-        className="absolute -inset-y-10 -left-32 w-28 pointer-events-none"
+        className="card-shimmer"
         style={{
-          background:
-            'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), rgba(79,209,232,0.24), rgba(217,58,164,0.12), transparent)',
-          mixBlendMode: 'screen',
-          animation: 'packPrismSweep 5.6s linear infinite',
           zIndex: 2,
+          backgroundImage:
+            'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%)',
+          backgroundSize: '200% auto',
         }}
       />
 
