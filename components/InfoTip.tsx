@@ -1,15 +1,21 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+
+const TIP_WIDTH = 220;
+const MARGIN = 8;
 
 export default function InfoTip({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const tipRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; arrowLeft: number; placement: 'top' | 'bottom' } | null>(null);
 
   useEffect(() => {
     if (!open) return;
     function handler(e: MouseEvent | TouchEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener('mousedown', handler);
     document.addEventListener('touchstart', handler);
@@ -19,9 +25,38 @@ export default function InfoTip({ text }: { text: string }) {
     };
   }, [open]);
 
+  useLayoutEffect(() => {
+    if (!open) { setPos(null); return; }
+    function reposition() {
+      if (!btnRef.current) return;
+      const btnRect = btnRef.current.getBoundingClientRect();
+      let left = btnRect.left + btnRect.width / 2 - TIP_WIDTH / 2;
+      left = Math.max(MARGIN, Math.min(left, window.innerWidth - TIP_WIDTH - MARGIN));
+
+      const tipHeight = tipRef.current?.offsetHeight ?? 70;
+      let placement: 'top' | 'bottom' = 'top';
+      let top = btnRect.top - tipHeight - MARGIN;
+      if (top < MARGIN) {
+        placement = 'bottom';
+        top = btnRect.bottom + MARGIN;
+      }
+
+      const arrowLeft = btnRect.left + btnRect.width / 2 - left;
+      setPos({ top, left, arrowLeft, placement });
+    }
+    reposition();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [open]);
+
   return (
-    <div ref={ref} className="relative inline-flex items-center" style={{ verticalAlign: 'middle' }}>
+    <div ref={wrapRef} className="relative inline-flex items-center" style={{ verticalAlign: 'middle' }}>
       <button
+        ref={btnRef}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}
@@ -44,12 +79,13 @@ export default function InfoTip({ text }: { text: string }) {
 
       {open && (
         <div
-          className="absolute z-50 text-left"
+          ref={tipRef}
+          className="fixed z-50 text-left"
           style={{
-            bottom: 'calc(100% + 8px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 220,
+            top: pos ? pos.top : -9999,
+            left: pos ? pos.left : -9999,
+            visibility: pos ? 'visible' : 'hidden',
+            width: TIP_WIDTH,
             background: '#0e1120',
             border: '1px solid rgba(79,209,232,0.2)',
             borderRadius: 10,
@@ -63,14 +99,14 @@ export default function InfoTip({ text }: { text: string }) {
           <div
             style={{
               position: 'absolute',
-              bottom: -5,
-              left: '50%',
+              ...(pos?.placement === 'bottom'
+                ? { top: -5, borderRight: 'none', borderBottom: 'none', borderLeft: '1px solid rgba(79,209,232,0.2)', borderTop: '1px solid rgba(79,209,232,0.2)' }
+                : { bottom: -5, borderRight: '1px solid rgba(79,209,232,0.2)', borderBottom: '1px solid rgba(79,209,232,0.2)' }),
+              left: pos ? pos.arrowLeft : '50%',
               transform: 'translateX(-50%) rotate(45deg)',
               width: 8,
               height: 8,
               background: '#0e1120',
-              borderRight: '1px solid rgba(79,209,232,0.2)',
-              borderBottom: '1px solid rgba(79,209,232,0.2)',
             }}
           />
         </div>

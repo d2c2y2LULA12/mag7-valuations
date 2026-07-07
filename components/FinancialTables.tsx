@@ -17,7 +17,7 @@ function Table({
       <h3 className="text-xs font-semibold uppercase tracking-widest text-[#4FD1E8] mb-3 px-1">
         {title}
       </h3>
-      <div className="rounded-xl overflow-hidden border border-[#1e1e3a]" style={{ background: 'rgba(13,13,26,0.7)' }}>
+      <div className="rounded-xl overflow-x-auto border border-[#1e1e3a]" style={{ background: 'rgba(13,13,26,0.7)' }}>
         <table className="fin-table">
           <thead>
             <tr>

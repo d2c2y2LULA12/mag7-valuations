@@ -264,6 +264,7 @@ body {
 /* Table styles */
 .fin-table {
   width: 100%;
+  min-width: max-content;
   border-collapse: collapse;
   font-size: 0.8125rem;
 }
@@ -277,6 +278,7 @@ body {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .fin-table th:first-child {
@@ -288,11 +290,13 @@ body {
   padding: 7px 12px;
   color: #d1d5db;
   border-bottom: 1px solid rgba(30, 30, 58, 0.5);
+  white-space: nowrap;
 }
 
 .fin-table td:first-child {
   text-align: left;
   color: #9ca3af;
+  min-width: 110px;
 }
 
 .fin-table tr:last-child td {
