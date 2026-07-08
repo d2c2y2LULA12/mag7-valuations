@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import YahooFinance from 'yahoo-finance2';
 const yf = new YahooFinance({ suppressNotices: ['ripHistorical'] as any });
 
@@ -34,6 +35,23 @@ function safe(val: unknown): number | null {
   return isFinite(n) ? n : null;
 }
 
+// Cache 5 min per ticker+period so repeated chart-range switches by
+// different visitors don't each hit Yahoo live.
+const getHistoryData = unstable_cache(
+  async (ticker: string, p1: string, p2: string, interval: Interval) => Promise.all([
+    yf.chart(ticker, {
+      period1:  p1,
+      period2:  p2,
+      interval,
+    }, { validateResult: false }),
+    yf.quoteSummary(ticker, {
+      modules: ['defaultKeyStatistics'],
+    }, { validateResult: false }),
+  ]),
+  ['stock-history'],
+  { revalidate: 300 }
+);
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { ticker: string } }
@@ -50,16 +68,7 @@ export async function GET(
   const p2  = toDateStr(new Date());
 
   try {
-    const [chartResult, quote]: [any, any] = await Promise.all([
-      yf.chart(ticker, {
-        period1:  p1,
-        period2:  p2,
-        interval: cfg.interval,
-      }, { validateResult: false }),
-      yf.quoteSummary(ticker, {
-        modules: ['defaultKeyStatistics'],
-      }, { validateResult: false }),
-    ]);
+    const [chartResult, quote]: [any, any] = await getHistoryData(ticker, p1, p2, cfg.interval);
 
     const eps = safe(((quote as any).defaultKeyStatistics as any)?.trailingEps);
     const quotes = (chartResult as any)?.quotes ?? [];

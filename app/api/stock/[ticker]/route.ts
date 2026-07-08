@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import YahooFinance from 'yahoo-finance2';
 const yf = new YahooFinance();
 
@@ -10,6 +11,21 @@ function safe(val: unknown): number | null {
   return isFinite(n) ? n : null;
 }
 
+// Yahoo fundamentals don't change intraday — cache 5 min so the app's
+// "data delayed up to 15 min" disclaimer stays true without hammering Yahoo.
+const getStockData = unstable_cache(
+  async (ticker: string) => Promise.all([
+    yf.quoteSummary(ticker, {
+      modules: ['price', 'summaryDetail', 'financialData', 'defaultKeyStatistics', 'recommendationTrend', 'assetProfile'],
+    }, { validateResult: false }),
+    yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2020-01-01', module: 'financials' } as any, { validateResult: false }),
+    yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2020-01-01', module: 'balance-sheet' } as any, { validateResult: false }),
+    yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2020-01-01', module: 'cash-flow' } as any, { validateResult: false }),
+  ]),
+  ['stock-data'],
+  { revalidate: 300 }
+);
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: { ticker: string } }
@@ -20,14 +36,7 @@ export async function GET(
   }
 
   try {
-    const [result, finSeries, balSeries, cfSeries]: [any, any, any, any] = await Promise.all([
-      yf.quoteSummary(ticker, {
-        modules: ['price', 'summaryDetail', 'financialData', 'defaultKeyStatistics', 'recommendationTrend', 'assetProfile'],
-      }, { validateResult: false }),
-      yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2020-01-01', module: 'financials' } as any, { validateResult: false }),
-      yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2020-01-01', module: 'balance-sheet' } as any, { validateResult: false }),
-      yf.fundamentalsTimeSeries(ticker, { type: 'annual', period1: '2020-01-01', module: 'cash-flow' } as any, { validateResult: false }),
-    ]);
+    const [result, finSeries, balSeries, cfSeries]: [any, any, any, any] = await getStockData(ticker);
 
     const price   = result.price            as Record<string, unknown> | undefined;
     const fin     = result.financialData    as Record<string, unknown> | undefined;
