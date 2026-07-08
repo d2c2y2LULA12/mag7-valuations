@@ -300,10 +300,10 @@ function ValuationTab({ data, loading }: { data: StockData | null; loading: bool
     <>
       <div className="rounded-xl border border-[#1e1e3a] p-5 mb-6 flex items-center justify-between" style={{ background: 'rgba(13,13,26,0.7)' }}>
         <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center">
+          <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center">
             Earnings Multiple Signal
             <InfoTip text={TIPS['Earnings Multiple Signal']} />
-          </p>
+          </div>
           <p className="text-xs text-gray-600">Forward P/E vs. 20 / 30 thresholds — earnings only</p>
         </div>
         <span className={`text-base font-black tracking-widest px-4 py-2 rounded-lg ${signalClass}`}>{signalLabel}</span>
@@ -392,10 +392,10 @@ function KeyStatsSection({ data, loading }: { data: StockData | null; loading: b
       <div className="grid grid-cols-3 gap-4">
         {stats.map(({ label, value }) => (
           <div key={label}>
-            <p className="text-xs text-gray-600 mb-0.5 flex items-center">
+            <div className="text-xs text-gray-600 mb-0.5 flex items-center">
               {label}
               {TIPS[label] && <InfoTip text={TIPS[label]} />}
-            </p>
+            </div>
             <p className="text-sm font-semibold text-gray-200 tabular-nums">{value}</p>
           </div>
         ))}
@@ -448,10 +448,10 @@ function AnalystRatingsSection({ data, loading }: { data: StockData | null; load
 
   return (
     <div className="rounded-xl border border-[#1e1e3a] p-5 mb-6" style={{ background: 'rgba(13,13,26,0.7)' }}>
-      <p className="text-xs text-gray-500 uppercase tracking-wider mb-4 flex items-center">
+      <div className="text-xs text-gray-500 uppercase tracking-wider mb-4 flex items-center">
         Analyst Ratings
         <InfoTip text={TIPS['Analyst Ratings']} />
-      </p>
+      </div>
       <div className="flex gap-6 items-center">
         {/* Buy % circle */}
         <div className="relative flex-shrink-0 w-24 h-24 flex items-center justify-center">
