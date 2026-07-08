@@ -1,5 +1,7 @@
 # Mag 7 Valuations
 
+![Mag 7 Valuations banner](public/readme/banner.png)
+
 A trading-card-style stock valuation app for the "Magnificent 7" (AAPL, MSFT, GOOGL, AMZN, NVDA, TSLA, META) — live at **[mag7valuations.vercel.app](https://mag7valuations.vercel.app)**.
 
 Open a foil pack, pull 7 holographic cards, and dive into full valuation breakdowns for each company — or pick two and compare them head-to-head, stat by stat.
