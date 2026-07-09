@@ -6,6 +6,8 @@ A trading-card-style stock valuation app for the "Magnificent 7" (AAPL, MSFT, GO
 
 Open a foil pack, pull 7 holographic cards, and dive into full valuation breakdowns for each company — or pick two and compare them head-to-head, stat by stat.
 
+Built as my first real web project while learning Next.js, TypeScript, and API-driven financial data.
+
 ## Features
 
 - **Pack opening** — tear open a foil pack to reveal all 7 cards with a holographic shimmer effect
